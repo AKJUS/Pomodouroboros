@@ -90,6 +90,9 @@ class Nexus:
     coordinated, dispatched, and collected for things like serialization.
     """
 
+    _scheduler: Scheduler[float, Callable[[], None], int]
+    _memDriver: MemoryDriver
+
     _interfaceFactory: UserInterfaceFactory
     "A factory to create a user interface as the Nexus is being instantiated."
 
@@ -137,9 +140,6 @@ class Nexus:
 
     _lastUpdateTime: float = field(default=0.0)
 
-    _scheduler: Scheduler[float, Callable[[], None], int] | None = None
-    _memDriver: MemoryDriver | None = None
-
     """
     I want to put the nexus into a state where there is always an active
     interval, always scheduled against _scheduler to do something upon its end.
@@ -148,6 +148,10 @@ class Nexus:
     that builds this for us.  Which should be fine, because there are only a
     few call sites for constructing a nexus, even the tests only have a single
     one in setUp.
+
+    So how do we compute the initial active interval?  Very much like
+    _activeInterval currently does.  We can refer to the scheduler's now()
+    rather than lastUpdateTime.
     """
 
     def _newIdleInterval(self) -> Idle:
@@ -196,6 +200,8 @@ class Nexus:
         Create a new, blank Nexus, with no attached UI.
         """
         return cls(
+            schedulerFromDriver(driver := MemoryDriver()),
+            driver,
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
@@ -315,7 +321,7 @@ class Nexus:
         # an absurdly high bound for a session length, 7 days; we could
         # probably dial this down to 18 hours just based on, like, human
         # physiology.
-        MAX_SESSION_LENGTH = (86400 * 7)
+        MAX_SESSION_LENGTH = 86400 * 7
 
         oldTime = max(oldTime, newTime - MAX_SESSION_LENGTH)
 

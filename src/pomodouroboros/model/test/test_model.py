@@ -6,6 +6,8 @@ from unittest.mock import ANY
 from zoneinfo import ZoneInfo
 
 from datetype import aware
+from fritter.drivers.memory import MemoryDriver
+from fritter.scheduler import schedulerFromDriver
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import Clock
 
@@ -24,7 +26,7 @@ from ..intervals import (
 )
 from ..nexus import Nexus
 from ..observables import Changes, IgnoreChanges, SequenceObserver
-from ..sessions import DailySessionRule, Weekday, Session
+from ..sessions import DailySessionRule, Session, Weekday
 
 
 @dataclass
@@ -50,7 +52,9 @@ class SessionChange:
     sessionEndTime: float | None = None
 
     def setEndTime(self, newEndTime: float) -> None:
-        assert self.sessionEndTime is None, f"session already ended at {self.sessionEndTime}"
+        assert (
+            self.sessionEndTime is None
+        ), f"session already ended at {self.sessionEndTime}"
         self.sessionEndTime = newEndTime
 
 
@@ -179,7 +183,12 @@ class NexusTests(TestCase):
         self.maxDiff = 9999
         self.clock = Clock()
         self.testUI = TestUserInterface(self.clock)
-        self.nexus = Nexus(self.testUI.setIt, 0)
+        self.nexus = Nexus(
+            schedulerFromDriver(driver := MemoryDriver()),
+            driver,
+            self.testUI.setIt,
+            0,
+        )
 
     def advanceTime(self, n: float) -> None:
         """
