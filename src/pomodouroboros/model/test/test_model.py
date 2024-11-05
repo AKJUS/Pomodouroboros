@@ -183,11 +183,13 @@ class NexusTests(TestCase):
         self.maxDiff = 9999
         self.clock = Clock()
         self.testUI = TestUserInterface(self.clock)
+        from math import inf
         self.nexus = Nexus(
             schedulerFromDriver(driver := MemoryDriver()),
             driver,
             self.testUI.setIt,
             0,
+            Idle(0.0, inf),
         )
 
     def advanceTime(self, n: float) -> None:

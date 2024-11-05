@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import inf
 from functools import singledispatch
 from json import dump, load
 from os import makedirs, replace
@@ -11,6 +12,8 @@ from typing import Callable, TypeAlias, cast
 from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
+
+from pomodouroboros.model.intervals import Idle
 
 from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
@@ -144,6 +147,7 @@ def nexusFromJSON(
         ),
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
+        _liveInterval=Idle(0, inf),
     )
     return nexus
 

@@ -8,7 +8,7 @@ from typing import Callable, Iterable, Iterator, MutableSequence, Sequence
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-from fritter.boundaries import Scheduler
+from fritter.boundaries import ScheduledCall, Scheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.twisted import TwistedTimeDriver
 from fritter.scheduler import schedulerFromDriver
@@ -100,6 +100,14 @@ class Nexus:
     """
     The last ID used for an intention, incremented by 1 each time a new one is
     created.
+    """
+
+    _liveInterval: AnyIntervalOrIdle
+    """
+    The current interval that is executing.
+
+    XXX this is the mutable replacement for _activeInterval, named differently
+    while implementing so as to avoid confusion
     """
 
     _intentions: MutableSequence[Intention] = field(
@@ -199,12 +207,21 @@ class Nexus:
         """
         Create a new, blank Nexus, with no attached UI.
         """
+
+        # this is a new, blank nexus, so we can know that the active interval
+        # is going to be an Idle interval that goes forever.
+
+        from math import inf
+
+        currentInterval = Idle(startTime=0.0, endTime=inf)
+
         return cls(
             schedulerFromDriver(driver := MemoryDriver()),
             driver,
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
+            _liveInterval=currentInterval,
         )
 
     def cloneWithoutUI(self) -> Nexus:
@@ -311,6 +328,36 @@ class Nexus:
         """
         Determine what the current active session is.
 
+        we want to convert this to a callback, that is run in (relative)
+        isolation
+
+        which is to say that when a session starts, we want to mutate the local
+        state to say that that session is running
+
+        but there's the sleep-for-days scenario, where you run the callback
+        that starts the session, but we are already past the end of that
+        session, then you start running some other callback that expects
+        session state to be accurate, but the clock is pointing at a time where
+        the session has already ended, but the 'session ended' callback isn't
+        called yet?
+
+        one solution: schedule session start / session end callbacks in pairs?
+        if they're scheduled together, then they'll be sorted and called at the
+        appropriate time, because the 'end' callback will already have been
+        invoked
+
+        we might be able to do this by just having a repeating 'start' timer
+        that immediately schedules an 'end' timer when it is run
+
+        but if we schedule both timers together at scheduling time we have some
+        assurances that they'll run at least relative to each other
+
+        this should be inverted into a I{series} of timers rather than one
+        timer
+
+        there's one pair of timers that is recomputed each time the automatic
+        session rules are edited; start (then end) the next automatic session.
+
         @param oldTime: the time that we have already considered.  We need to
             use some reference point to start searching for new automatic
             sessions, so this sets a lower bound on the time we have to search
@@ -370,10 +417,6 @@ class Nexus:
         # (particularly important so tests can be exact).
         self.userInterface
 
-        if self._scheduler is None:
-            self._memDriver = MemoryDriver()
-            self._scheduler = schedulerFromDriver(self._memDriver)
-        assert self._memDriver is not None, "initialized"
         self._memDriver.advance(newTime - self._memDriver.now())
 
         debug("begin advance from", self._lastUpdateTime, "to", newTime)
@@ -425,6 +468,11 @@ class Nexus:
                         newDuration = next(self._upcomingDurations, None)
                         self.userInterface.intervalProgress(1.0)
                         self.userInterface.intervalEnd()
+                        # in this implementation, there is a missing test case:
+                        # if we fall off the end of the streak rule, and it's
+                        # time to issue another StartPrompt after the final
+                        # break (or, hypothetically, the final pomodoro if we
+                        # organize a streak rule like that) we just … won't.
                         if newDuration is None:
                             # XXX needs test coverage
                             previous, self._currentStreak = (
@@ -553,6 +601,145 @@ class Nexus:
                 # there, and we need to emit our final progress notification
                 # and build that new interval.
                 self.advanceToTime(self._lastUpdateTime)
+
+    # NEW VERSION: LET'S DO THIS WITH CALLBACKS AND TIMERS RATHER THAN OUR OWN STATE
+
+    _nextEndTimer: ScheduledCall[float, Callable[[], None], int] | None = None
+    """
+    The timer for the action to take at the end of the next interval.
+    """
+
+    _lastSessionCheck: float = 0.0
+    """
+    The time at which we last checked to see if we have a new automatic session
+    to create.
+
+    TODO: include me in the persistence, so we don't forget, or find some
+    better timestamp to hang this logic on
+    """
+
+    def tktktk_pomodoroEnded(self) -> None:
+        """
+        A pomodoro ended.
+        """
+
+    def tktktk_activePomodoroEvaluated(self) -> None:
+        """
+        The active pomodoro was evaluated, which means it's time to reschedule
+        the pomodoro-end timer to execute immediately.
+        """
+        assert (
+            self._nextEndTimer is not None
+        ), "there's gotta be a pomodoro active"
+        assert isinstance(
+            self._liveInterval, Pomodoro
+        ), "it's gotta be a pomodoro"
+        self._nextEndTimer.cancel()
+        self._nextEndTimer = None
+        self._liveInterval.endTime = self._scheduler.now()
+        self._proceedToNextInterval()
+
+    def _nextSession(self, now: float) -> Session | None:
+        """
+        Get the first already-computed session that has not yet begun.
+        """
+        for session in self._sessions:
+            if session.start > now:
+                return session
+        return None
+
+    def _proceedToNextInterval(self) -> None:
+        """
+        The current interval just ended, either by some interaction from a
+        user, or, from the passage of time going over that interval's endTime.
+        Determine what the next live should be, that starts now, and schedule a
+        timer that will run when it ends.
+        """
+        now = self._scheduler.now()
+        assert (
+            self._liveInterval.endTime >= self._scheduler.now()
+        ), "we should be running this because the interval has already expired or is expiring"
+        activeSession = self._activeSession(self._lastSessionCheck, now)
+        self._lastSessionCheck = now
+        newInterval: AnyIntervalOrIdle | None = None
+
+        # grace period or start prompt expiring; time for a new streak, the old
+        # streak ended.
+        if isinstance(self._liveInterval, (GracePeriod, StartPrompt)):
+            self._upcomingDurations = iter(())
+
+        if isinstance(self._liveInterval, (Break, Pomodoro)):
+            if (newDuration := next(self._upcomingDurations, None)) is not None:
+                newInterval = preludeIntervalMap[
+                    newDuration.intervalType
+                ](
+                    self._liveInterval.endTime,
+                    self._liveInterval.endTime + newDuration.seconds,
+                )
+                self._liveInterval = newInterval
+
+        # if any of these types of session are ending, that means we need
+        # to check to see if there's a session active to do another start
+        # prompt.
+
+        if newInterval is None:
+            # If we haven't figured out the new interval by this point, then we
+            # need to compute a start prompt.
+
+            if activeSession is not None:
+                scoreInfo = activeSession.idealScoreFor(self)
+                nextDrop = scoreInfo.nextPointLoss
+                if nextDrop is None or nextDrop <= now:
+                    # TODO: need a special case for this in the UI, since if
+                    # nextDrop is None, then scoreBeforeLoss() ==
+                    # scoreAfterLoss() and that will look weird.
+                    nextDrop = activeSession.end
+                newInterval = StartPrompt(
+                    self._lastUpdateTime,
+                    nextDrop,
+                    scoreInfo.scoreBeforeLoss(),
+                    scoreInfo.scoreAfterLoss(),
+                )
+            else:
+                # determine the end for the idle interval we are about to create
+                nextSession = self._nextSession(now)
+                # roughly the same as _newIdleInterval?
+                from math import inf
+
+                newInterval = Idle(
+                    now, nextSession.start if nextSession is not None else inf
+                )
+
+        self._scheduler.callAt(
+            self._liveInterval.endTime, self._intervalJustEnded
+        )
+
+    def _intervalJustEnded(self) -> None:
+        """
+        An interval just ended, specifically because its endTime elapsed.
+
+        Explicit user actions may also end an interval.
+
+        if time is actually passing then::
+
+            Idle->StartPrompt
+            StartPrompt->new StartPrompt  # if there's more time left in the session
+
+            StartPrompt->Idle       # when the session expires mid-startprompt
+                                    # (it feels like this isn't actually possible,
+                                    # due to the way it's calculated? session-end
+                                    # will always be an inflection point?)
+
+            Pomodoro->Break         # when pomodoro done
+            Break->StartPrompt      # when break done
+
+            # due to user actions,
+            StartPrompt->Pomodoro   # set intention explicitly
+            GracePeriod->Pomodoro   # set intention to continue streak
+            Pomodoro->Break         # evaluate pomodoro early
+
+        What do we do?
+        """
 
 
 preludeIntervalMap: dict[IntervalType, type[GracePeriod | Break]] = {
