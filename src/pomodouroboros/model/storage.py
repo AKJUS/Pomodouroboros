@@ -299,11 +299,15 @@ def loadDefaultNexus(
         )
         loaded.advanceToTime(currentTime)
         return loaded
+    # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
+    # interval
+    currentInterval = Idle(startTime=0.0, endTime=inf)
     return Nexus(
         schedulerFromDriver(driver := MemoryDriver()),
         driver,
         userInterfaceFactory,
         0,
+        _liveInterval=currentInterval,
     )
 
 

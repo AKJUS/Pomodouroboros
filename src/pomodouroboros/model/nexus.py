@@ -213,8 +213,9 @@ class Nexus:
 
         from math import inf
 
+        # See pomodouroboros.model.storage.loadDefaultNexus; a little bit of
+        # duplication here, since we are "idle forever" before any data exists.
         currentInterval = Idle(startTime=0.0, endTime=inf)
-
         return cls(
             schedulerFromDriver(driver := MemoryDriver()),
             driver,
