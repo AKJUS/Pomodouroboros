@@ -658,7 +658,7 @@ class Nexus:
         """
         now = self._scheduler.now()
         assert (
-            self._liveInterval.endTime >= self._scheduler.now()
+            self._liveInterval.endTime <= self._scheduler.now()
         ), "we should be running this because the interval has already expired or is expiring"
         activeSession = self._activeSession(self._lastSessionCheck, now)
         self._lastSessionCheck = now
