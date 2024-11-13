@@ -22,7 +22,12 @@ from fritter.repeat import Async
 from fritter.repeat.rules.datetimes import EachDTRule, EachWeekOn
 from twisted.internet.defer import Deferred
 
-from pomodouroboros.model.observables import IgnoreChanges, ObservableList
+from pomodouroboros.model.observables import (
+    IgnoreChanges,
+    ObservableList,
+    Observer,
+    observable,
+)
 
 if TYPE_CHECKING:
     from .ideal import IdealScoreInfo
@@ -115,12 +120,13 @@ class DailySessionRule:
         )
 
 
-@dataclass
+@observable()
 class ActiveSessionManager:
+    activeSession: Session | None
+    observer: Observer
     rules: ObservableList[SessionRule]
     _scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
     _everythingScheduled: list[Cancellable]
-    _currentSession: Session | None
     _async: Async
 
     def _beginSessionWithRule(
@@ -142,7 +148,7 @@ class ActiveSessionManager:
             self._scheduler.callAt(
                 endSteps[0], self._endSessionWithRule(rule, session)
             )
-            self._currentSession = session
+            self.activeSession = session
 
         return lambda steps, cancel: Deferred.fromCoroutine(
             work(steps, cancel)
@@ -152,7 +158,7 @@ class ActiveSessionManager:
         self, rule: SessionRule, session: Session
     ) -> Callable[[], None]:
         def work() -> None:
-            self._currentSession = None
+            self.activeSession = None
 
         return work
 
@@ -188,10 +194,10 @@ class ActiveSessionManager:
 
     @classmethod
     def new(
-        cls, scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+        cls, observer: Observer, scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
     ) -> ActiveSessionManager:
         rules: ObservableList[SessionRule] = ObservableList(IgnoreChanges)
-        self = cls(rules, scheduler, [], None, Async(TwistedAsyncDriver()))
+        self = cls(None, observer, rules, scheduler, [], Async(TwistedAsyncDriver()))
         rules.observer = self
         self._reschedule()
         return self

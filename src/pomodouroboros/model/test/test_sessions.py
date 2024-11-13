@@ -1,5 +1,6 @@
+from contextlib import contextmanager
 from datetime import datetime, time
-from typing import Callable
+from typing import Callable, Iterator
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
@@ -9,7 +10,7 @@ from fritter.drivers.datetimes import DateTimeDriver
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
 
-from ..sessions import DailySessionRule, Session, Weekday, ActiveSessionManager
+from ..sessions import ActiveSessionManager, DailySessionRule, Session, Weekday
 
 PT = ZoneInfo("America/Los_Angeles")
 
@@ -38,11 +39,55 @@ class SessionStartEndSchedulingTests(TestCase):
             aware(datetime(2023, 11, 7, 2, tzinfo=PT), ZoneInfo).timestamp()
             - memory.now()
         )
-        asm = ActiveSessionManager.new(dateScheduler)
+        sessionChanges = []
+
+        class Observe:
+            @contextmanager
+            def added(self, key: object, new: object) -> Iterator[None]:
+                yield
+                print("A", key, new)
+
+            @contextmanager
+            def removed(self, key: object, old: object) -> Iterator[None]:
+                yield
+                print("R", key, old)
+
+            @contextmanager
+            def changed(
+                self, key: object, old: object, new: object
+            ) -> Iterator[None]:
+                yield
+                print("C", key, old, new)
+                if key == "activeSession":
+                    sessionChanges.append((old, new))
+
+        asm = ActiveSessionManager.new(Observe(), dateScheduler)
         asm.rules.append(testingRule)
-        self.assertIs(asm._currentSession, None)
+        self.assertIs(asm.activeSession, None)
         memory.advance(desiredStart + 10 - memory.now())
-        self.assertEqual(asm._currentSession, Session(start=desiredStart, end=desiredEnd, automatic=True))
+        self.assertEqual(
+            asm.activeSession,
+            Session(start=desiredStart, end=desiredEnd, automatic=True),
+        )
+        memory.advance(desiredEnd + 15 - memory.now())
+        self.assertEqual(asm.activeSession, None)
+        self.assertEqual(
+            sessionChanges,
+            [
+                (
+                    None,
+                    Session(
+                        start=desiredStart, end=desiredEnd, automatic=True
+                    ),
+                ),
+                (
+                    Session(
+                        start=desiredStart, end=desiredEnd, automatic=True
+                    ),
+                    None,
+                ),
+            ],
+        )
 
 
 class SessionGenerationTests(TestCase):
