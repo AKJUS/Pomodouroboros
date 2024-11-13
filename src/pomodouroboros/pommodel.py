@@ -296,7 +296,7 @@ class Day(object):
         score = self.score()
         icon = tomato if score.hits > score.misses else can
         unevaluated, q = (
-            (score.unevaluated, "?") if score.unevaluated else ("", "")
+            (score.unevaluated, "? ") if score.unevaluated else ("", "")
         )
         remaining, e = (score.remaining, "…") if score.remaining else ("", "")
         return f"{icon}: {score.hits}✓ {score.misses}✗ {unevaluated}{q}{remaining}{e}"
