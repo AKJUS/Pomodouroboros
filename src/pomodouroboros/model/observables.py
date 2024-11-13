@@ -202,12 +202,10 @@ class ObservableList(MutableSequence[V]):
         return repr(self._storage) + "~(observable)"
 
     @overload
-    def __setitem__(self, index: int, value: V) -> None:
-        ...
+    def __setitem__(self, index: int, value: V) -> None: ...
 
     @overload
-    def __setitem__(self, index: slice, value: Iterable[V]) -> None:
-        ...
+    def __setitem__(self, index: slice, value: Iterable[V]) -> None: ...
 
     def __setitem__(self, index: int | slice, value: V | Iterable[V]) -> None:
         with (
@@ -242,12 +240,10 @@ class ObservableList(MutableSequence[V]):
 
     # proxied read operations
     @overload
-    def __getitem__(self, index: int) -> V:
-        ...
+    def __getitem__(self, index: int) -> V: ...
 
     @overload
-    def __getitem__(self, index: slice) -> MutableSequence[V]:
-        ...
+    def __getitem__(self, index: slice) -> MutableSequence[V]: ...
 
     def __getitem__(self, index: slice | int) -> V | MutableSequence[V]:
         return self._storage.__getitem__(index)
@@ -348,10 +344,12 @@ class ObservableProperty:
 
         # I need to avoid invoking the observer if the instance isn't fully
         # initialized
-        with notify.changed(
-            self.field_name, instance.__dict__[self.field_name], value
-        ) if self.field_name in instance.__dict__ else notify.added(
-            self.field_name, value
+        with (
+            notify.changed(
+                self.field_name, instance.__dict__[self.field_name], value
+            )
+            if self.field_name in instance.__dict__
+            else notify.added(self.field_name, value)
         ):
             instance.__dict__[self.field_name] = value
 
@@ -426,6 +424,68 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
         return cls
 
     return make_observable
+
+
+@dataclass
+class DispatchingObserver(Generic[Kcon, Vcon]):
+    _adders: dict[
+        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
+    ]
+    _removers: dict[
+        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
+    ]
+    _changers: dict[
+        Kcon,
+        tuple[
+            list[Callable[[Vcon, Vcon], None]],
+            list[Callable[[Vcon, Vcon], None]],
+        ],
+    ]
+
+    def beforeAdd(self, key: Kcon) -> None:
+        pass
+
+    def afterAdd(self, key: Kcon) -> None:
+        pass
+
+    def beforeRemove(self, key: Kcon) -> None:
+        pass
+
+    def afterRemove(self, key: Kcon) -> None:
+        pass
+
+    def beforeChange(self, key: Kcon) -> None:
+        pass
+
+    def afterChange(self, key: Kcon) -> None:
+        pass
+
+    @contextmanager
+    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+        before, after = self._adders.get(key, ([], []))
+        for each in before:
+            each(new)
+        yield
+        for each in after:
+            each(new)
+
+    @contextmanager
+    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+        before, after = self._removers.get(key, ([], []))
+        for each in before:
+            each(old)
+        yield
+        for each in after:
+            each(old)
+
+    @contextmanager
+    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+        before, after = self._changers.get(key, ([], []))
+        for each in before:
+            each(old, new)
+        yield
+        for each in after:
+            each(old, new)
 
 
 @dataclass(repr=False)
