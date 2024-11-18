@@ -136,6 +136,9 @@ class ActiveSessionManager:
             steps: list[DateTime[ZoneInfo]], cancel: Cancellable
         ) -> None:
             if not steps:
+                # We will be run with an empty C{steps} when the repeating call
+                # is set up.  Once an actual instance of the rule has passed,
+                # C{steps} will have that value in it.
                 return
             endSteps, endNextRefs = rule.endRule()(
                 steps[0], steps[0] + timedelta(days=7)
