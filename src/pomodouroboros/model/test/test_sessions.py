@@ -22,7 +22,7 @@ testingRule = DailySessionRule(
 
 
 class SessionStartEndSchedulingTests(TestCase):
-    def test_observeScheduledSessions(self) -> None:
+    def test_observeScheduledSession(self) -> None:
         dateScheduler: Scheduler[
             DateTime[ZoneInfo], Callable[[], None], int
         ] = schedulerFromDriver(
@@ -40,26 +40,25 @@ class SessionStartEndSchedulingTests(TestCase):
             - memory.now()
         )
         sessionChanges = []
+        extraneousChanges = []
 
         class Observe:
             @contextmanager
             def added(self, key: object, new: object) -> Iterator[None]:
                 yield
-                print("A", key, new)
+                extraneousChanges.append(("add", key, new))
 
             @contextmanager
             def removed(self, key: object, old: object) -> Iterator[None]:
                 yield
-                print("R", key, old)
+                extraneousChanges.append(("remove", key, old))
 
             @contextmanager
             def changed(
                 self, key: object, old: object, new: object
             ) -> Iterator[None]:
                 yield
-                print("C", key, old, new)
-                if key == "activeSession":
-                    sessionChanges.append((old, new))
+                sessionChanges.append((key, old, new))
 
         asm = ActiveSessionManager.new(Observe(), dateScheduler)
         asm.rules.append(testingRule)
@@ -71,21 +70,35 @@ class SessionStartEndSchedulingTests(TestCase):
         )
         memory.advance(desiredEnd + 15 - memory.now())
         self.assertEqual(asm.activeSession, None)
+        expectedSession = Session(
+            start=desiredStart, end=desiredEnd, automatic=True
+        )
         self.assertEqual(
             sessionChanges,
             [
+                ("activeSession", None, expectedSession),
+                ("activeSession", expectedSession, None),
+            ],
+        )
+        expectedRule = DailySessionRule(
+            dailyStart=aware(
+                time(3, 4, 5, tzinfo=ZoneInfo(key="America/Los_Angeles")),
+                ZoneInfo,
+            ),
+            dailyEnd=aware(
+                time(4, 5, 6, tzinfo=ZoneInfo(key="America/Los_Angeles")),
+                ZoneInfo,
+            ),
+            days={Weekday.tuesday, Weekday.wednesday, Weekday.friday},
+        )
+        self.assertEqual(
+            extraneousChanges,
+            [
                 (
-                    None,
-                    Session(
-                        start=desiredStart, end=desiredEnd, automatic=True
-                    ),
-                ),
-                (
-                    Session(
-                        start=desiredStart, end=desiredEnd, automatic=True
-                    ),
-                    None,
-                ),
+                    "add",
+                    "rules",
+                    [expectedRule],
+                )
             ],
         )
 
