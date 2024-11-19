@@ -1,4 +1,76 @@
 # -*- test-case-name: pomodouroboros.model.test.test_observables -*-
+
+"""
+Create observable mutable objects, for interactive user interfaces to present
+changes in real time.
+
+This is a Python native way to achieve something similar to
+U{NSKeyValueObserving
+<https://developer.apple.com/documentation/objectivec/nsobject/nskeyvalueobserving?language=objc#>};
+in addition to being a generally nice way to reflect changes, in the mac UI for
+Pomodouroboros, we need to mirror changes into PyObjC model classes for the UI
+to observe.
+
+However, unlike Objective C, python does not allow for monkeypatching the
+internals of C{object}, nor does it provide a native attribute-change
+observation feature in the language itself, so all these classes must be
+opt-in.
+
+To declare a class whose changes may be observable, use the L{observable}
+decorator.  This creates a dataclass, like so::
+
+    from pomodouroboros.model.observables import observable, Observer
+
+    @observable()
+    class Box:
+        observer: Observer
+        contents: int
+
+Then, to observe the changes, construct your newly-created dataclass with an
+object that conforms to the Observer protocol.  Observers have 3 methods:
+added, removed, and changed; each of these methods returns a contextmanager,
+which will be entered before the change, then exited after the change.  To
+implement one, the L{contextlib.contextmanager} decorator is helpful::
+
+    from contextlib import contextmanager
+    from typing import Iterator
+
+    class ShowChanges:
+        @contextmanager
+        def added(self, key: str, new: object) -> Iterator[None]:
+            print(f"will add {key} as {new}")
+            yield
+            print(f"did add {key} as {new}")
+
+        @contextmanager
+        def removed(self, key: str, old: object) -> Iterator[None]:
+            print(f"will remove {key} (was {old})")
+            yield
+            print(f"did remove {key} (was {old})")
+
+        @contextmanager
+        def changed(self, key: str, old: object, new: object) -> Iterator[None]:
+            print(f"will change {key} from {old} to {new}")
+            yield
+            print(f"did change {key} from {old} to {new}")
+
+Put them together by constructing them::
+
+    box = Box(ShowChanges(), 1)
+
+And then observe the change::
+
+    box.contents += 1
+
+Which should print::
+
+    will add contents as 1
+    did add contents as 1
+    will change contents from 1 to 2
+    did change contents from 1 to 2
+
+"""
+
 from __future__ import annotations
 
 import sys
