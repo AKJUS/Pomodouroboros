@@ -69,6 +69,44 @@ Which should print::
     will change contents from 1 to 2
     did change contents from 1 to 2
 
+This works for the attributes on a single object; however, often you will want
+to observe hierarchies of objects, with other mutable containers within it,
+such as lists and dictionaries.  To do this, you can construct a parallel
+hierarchy of observables with a L{PathObserver}.  Let's put our box on a shelf,
+with some other boxes::
+
+    from pomodouroboros.model.observables import PathObserver, CustomObserver, ObservableList
+
+    @observable()
+    class Shelf:
+        observer: CustomObserver[PathObserver[object, object]]
+        boxes: ObservableList[Box]
+
+    def newShelf(observer: Observer) -> Shelf:
+        p = PathObserver(observer, "")
+        return Shelf(p, ObservableList(p.child("boxes")))
+
+    shelf = newShelf(ShowChanges())
+    shelf.boxes.append(box)
+
+You can then see the box being added::
+
+    will add boxes.0 as Box(observer=<__main__.ShowChanges object at 0x10337e630>, contents=2)
+    did add boxes.0 as Box(observer=<__main__.ShowChanges object at 0x10337e630>, contents=2)
+
+Note, however, that if you want your observers to see changes to boxes, you
+must also change your box's observer::
+
+    box.observer = shelf.observer.child("boxes").child("0")
+
+and now those changes will show up to the path observer::
+
+    box.contents += 1
+
+which will show up as::
+
+    will change boxes.0.contents from 2 to 3
+    did change boxes.0.contents from 2 to 3
 """
 
 from __future__ import annotations
