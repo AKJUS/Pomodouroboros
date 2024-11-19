@@ -116,6 +116,7 @@ class TestObservables(TC):
         example.value1 = "new value"
         del example.value1
         example.valueList.append("new list value")
+        example.secretInternalChange()
         expectedDebugOutput = "\n".join(
             [
                 "will change 'value1' from 'John' to 'new value'",
@@ -295,6 +296,13 @@ class Example:
     value1: str
     value2: int
     valueList: ObservableList[str]
+    _internalValue: float = 0.0
+
+    def secretInternalChange(self) -> None:
+        """
+        Change an attribute that should not be observable.
+        """
+        self._internalValue += 1
 
     @classmethod
     def new(

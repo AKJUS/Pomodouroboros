@@ -393,6 +393,25 @@ class MustSpecifyObserver(Exception):
     """
 
 
+def _shouldBeObservable(
+    key: str, annotation: object, observerName: str
+) -> bool:
+    """
+    Should the attribute with the given name and annotation emit messages to
+    the observer, for an L{observable} class with an observer named
+    C{observerName}.
+    """
+    return (
+        key
+        != observerName  # the observer should not be able to observe the
+        # observer changing
+    ) and (
+        not key.startswith(
+            "_"
+        )  # TODO: test for private attribute observability
+    )
+
+
 @dataclass_transform(field_specifiers=(field,))
 def observable(repr: bool = True) -> Callable[[Ty], Ty]:
     def make_observable(cls: Ty) -> Ty:
@@ -412,7 +431,7 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
             )
 
         for k, v in originalAnnotations.items():
-            if k != observerName:
+            if _shouldBeObservable(k, v, observerName):
                 setattr(cls, k, ObservableProperty(observerName, k))
         if observerIndex != 0:
             # If the observer is not specified as the first argument, then the
