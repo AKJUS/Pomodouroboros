@@ -9,6 +9,8 @@ altgraph==0.17.4
     #   macholib
     #   modulegraph
     #   py2app
+anyio==4.6.2.post1
+    # via httpx
 appdirs==1.4.4
     # via twisted
 attrs==24.2.0
@@ -18,11 +20,15 @@ attrs==24.2.0
     #   twisted
 automat==24.8.1
     # via twisted
-bcrypt==4.2.0
+bcrypt==4.2.1
     # via twisted
-build==1.2.1
+build==1.2.2.post1
     # via pip-tools
-cffi==1.17.0
+certifi==2024.8.30
+    # via
+    #   httpcore
+    #   httpx
+cffi==1.17.1
     # via cryptography
 click==8.1.7
     # via
@@ -30,7 +36,7 @@ click==8.1.7
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==43.0.1
+cryptography==43.0.3
     # via
     #   pyopenssl
     #   service-identity
@@ -47,18 +53,28 @@ encrust==2024.9.3
     # via -r requirements.in
 fritter==0.0.9
     # via -r requirements.in
+h11==0.14.0
+    # via httpcore
 h2==4.1.0
-    # via twisted
+    # via
+    #   httpx
+    #   twisted
 hpack==4.0.0
     # via h2
+httpcore==1.0.7
+    # via httpx
+httpx[http2]==0.27.2
+    # via twisted
 hyperframe==6.0.1
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.111.2
+hypothesis==6.119.4
     # via twisted
-idna==3.8
+idna==3.10
     # via
+    #   anyio
+    #   httpx
     #   hyperlink
     #   twisted
 incremental==24.7.2
@@ -69,15 +85,15 @@ macholib==1.16.3
     #   py2app
 modulegraph==0.19.6
     # via py2app
-mypy==1.5.1
+mypy==1.13.0
     # via
     #   -r requirements.in
     #   mypy-zope
 mypy-extensions==1.0.0
     # via mypy
-mypy-zope==1.0.5
+mypy-zope==1.0.9
     # via -r requirements.in
-packaging==24.1
+packaging==24.2
     # via
     #   build
     #   delocate
@@ -90,11 +106,11 @@ py2app==0.28.8
     # via
     #   -r requirements.in
     #   encrust
-pyasn1==0.6.0
+pyasn1==0.6.1
     # via
     #   pyasn1-modules
     #   service-identity
-pyasn1-modules==0.4.0
+pyasn1-modules==0.4.1
     # via service-identity
 pycparser==2.22
     # via cffi
@@ -128,7 +144,7 @@ pyobjc-framework-usernotifications==10.3.1
     #   quickmacapp
 pyopenssl==24.2.1
     # via twisted
-pyproject-hooks==1.1.0
+pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
@@ -140,35 +156,39 @@ quickmacapp==2023.4.24
     # via -r requirements.in
 quickmachotkey==2023.11.17
     # via -r requirements.in
-service-identity==24.1.0
+service-identity==24.2.0
     # via twisted
 six==1.16.0
     # via python-dateutil
+sniffio==1.3.1
+    # via
+    #   anyio
+    #   httpx
 sortedcontainers==2.4.0
     # via hypothesis
-twisted[macos-platform,tls]==24.7.0
+twisted[macos-platform,tls]==24.10.0
     # via
     #   -r requirements.in
     #   encrust
     #   quickmacapp
-types-python-dateutil==2.9.0.20240821
+types-python-dateutil==2.9.0.20241003
     # via -r requirements.in
 typing-extensions==4.12.2
     # via
     #   delocate
     #   mypy
     #   twisted
-tzdata==2024.1
+tzdata==2024.2
     # via fritter
 ulid-py==1.1.0
     # via -r requirements.in
-wheel==0.44.0
+wheel==0.45.0
     # via pip-tools
 wheel-filename==1.4.1
     # via encrust
 zope-event==5.0
     # via zope-schema
-zope-interface==7.0.3
+zope-interface==7.1.1
     # via
     #   mypy-zope
     #   twisted
@@ -177,7 +197,7 @@ zope-schema==7.0.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-# pip==24.2
+pip==24.3.1
     # via pip-tools
 setuptools==70.3.0
     # via

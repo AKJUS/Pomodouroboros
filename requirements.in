@@ -6,7 +6,7 @@ pyobjc-framework-Cocoa
 pyobjc-framework-ExceptionHandling
 pyobjc-framework-UserNotifications
 twisted[tls,macos-platform]
-mypy<1.6.0
+mypy
 mypy-zope
 python-dateutil
 types-python-dateutil

@@ -44,9 +44,11 @@ class IntentionRow(NSObject):
 
     # pragma mark Attributes
 
-    _forwarded = Forwarder(
+    _fwd: Forwarder[IntentionRow] = Forwarder(
         "intention", setterWrapper=interactionRoot
-    ).forwarded
+    )
+    _forwarded = _fwd.forwarded
+    del _fwd
 
     title: Attr[str, IntentionRow] = _forwarded("title")
     textDescription: Attr[str, IntentionRow] = _forwarded("description")
