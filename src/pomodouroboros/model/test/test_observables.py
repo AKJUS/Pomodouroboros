@@ -3,9 +3,11 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator, Protocol, Sequence, TypeVar
 
 from twisted.trial.unittest import SynchronousTestCase as TC
+
+from pomodouroboros.model.observables import CustomObserver
 
 from ..observables import (
     Changes,
@@ -57,7 +59,7 @@ class TestObservables(TC):
             lambda mycls: ChangeRecorder(mycls),
             # strong=True,
         )
-        self.assertEqual(cr.changes, [])
+        self.assertEqual(cr.changes, [])  # type:ignore[attr-defined]
         example.value1 = "x"
         example.value2 = 3
         example.valueList.append("hello")
@@ -66,32 +68,32 @@ class TestObservables(TC):
         del example.valueList[1]
         self.assertEqual(
             [
-                ("will change", "value1", "John", "John", "x"),
-                ("did change", "value1", "x", "John", "x"),
-                ("will change", "value2", 30, 30, 3),
-                ("did change", "value2", 3, 30, 3),
-                ("will add", "list.0", "not found"),
-                ("did add", "list.0", "not found"),
-                ("will add", "list.1", "not found"),
-                ("did add", "list.1", "not found"),
+                ("will change", ("value1",), "John", "John", "x"),
+                ("did change", ("value1",), "x", "John", "x"),
+                ("will change", ("value2",), 30, 30, 3),
+                ("did change", ("value2",), 3, 30, 3),
+                ("will add", ("list", 0), "not found"),
+                ("did add", ("list", 0), "not found"),
+                ("will add", ("list", 1), "not found"),
+                ("did add", ("list", 1), "not found"),
                 (
                     "will change",
-                    "list.1",
+                    ("list", 1),
                     "not found before",
                     "goodbye",
                     "goodbye!",
                 ),
                 (
                     "did change",
-                    "list.1",
+                    ("list", 1),
                     "not found after",
                     "goodbye",
                     "goodbye!",
                 ),
-                ("will remove", "list.1", None, "goodbye!"),
-                ("did remove", "list.1", None, "goodbye!"),
+                ("will remove", ("list", 1), "not found", "goodbye!"),
+                ("did remove", ("list", 1), "not found", "goodbye!"),
             ],
-            cr.changes,
+            cr.changes,  # type:ignore[attr-defined]
         )
 
     def test_debug(self) -> None:
@@ -111,20 +113,21 @@ class TestObservables(TC):
         # can't express a bound that DebugChanges[K, V].original is a TypeVar
         # with its own type but also bounded by Changes[K, V]
         # https://github.com/python/typing/issues/548
-        cr: ChangeRecorder = debug.original  # type:ignore[assignment]
+        cr: ChangeRecorder = debug.original  # type:ignore[attr-defined]
 
         example.value1 = "new value"
         del example.value1
         example.valueList.append("new list value")
         example.secretInternalChange()
+        self.maxDiff = 9999
         expectedDebugOutput = "\n".join(
             [
-                "will change 'value1' from 'John' to 'new value'",
-                "did change 'value1' from 'John' to 'new value'",
-                "will remove 'value1' 'new value'",
-                "did remove 'value1' 'new value'",
-                "will add 'list.0' 'new list value'",
-                "did add 'list.0' 'new list value'",
+                "will change ('value1',) from 'John' to 'new value'",
+                "did change ('value1',) from 'John' to 'new value'",
+                "will remove ('value1',) 'new value'",
+                "did remove ('value1',) 'new value'",
+                "will add ('list', 0) 'new list value'",
+                "did add ('list', 0) 'new list value'",
                 "",
             ]
         )
@@ -132,9 +135,9 @@ class TestObservables(TC):
             ("will add", "value1", "John"),
             ("did add", "value1", "new value"),
             ("will remove", "value1", "new value", "new value"),
-            ("did remove", "value1", None, "new value"),
-            ("will add", "list.0", "not found"),
-            ("did add", "list.0", "not found"),
+            ("did remove", "value1", "not found", "new value"),
+            ("will add", ("list", 0), "not found"),
+            ("did add", ("list", 0), "not found"),
         ]
         self.assertEqual(cr.changes, expectedChanges)
         self.assertEqual(io.getvalue(), expectedDebugOutput)
@@ -237,6 +240,37 @@ class VerboseColor:
         return (self.name, self.red, self.green, getattr(self, "blue", None))
 
 
+class MaybeStr(Protocol):
+    def __call__(self, nf: str = "not found") -> object: ...
+
+
+def getfunc(
+    key: tuple[object, ...] | str, o: object
+) -> tuple[object, MaybeStr]:
+
+    get: MaybeStr
+    match key:
+        case str(attrkey):
+            rekey: object = attrkey
+
+            def get(nf: str = "not found") -> object:
+                return getattr(o, attrkey, nf)
+
+        case (str(attrkey),):
+            rekey = attrkey
+
+            def get(nf: str = "not found") -> object:
+                return getattr(o, attrkey, nf)
+
+        case _:
+            rekey = key
+
+            def get(nf: str = "not found") -> object:
+                return nf
+
+    return rekey, get
+
+
 @dataclass(repr=False)
 class ChangeRecorder:
     example: object
@@ -246,53 +280,48 @@ class ChangeRecorder:
         return "~"
 
     @contextmanager
-    def added(self, key: str, new: object) -> Iterator[None]:
+    def added(
+        self, key: tuple[object, ...] | str, new: object
+    ) -> Iterator[None]:
         """
         C{value} was added for the given C{key}.
         """
-        self.changes.append(
-            ("will add", key, getattr(self.example, key, "not found"))
-        )
+        rekey, get = getfunc(key, self.example)
+        self.changes.append(("will add", rekey, get()))
         yield
-        self.changes.append(
-            ("did add", key, getattr(self.example, key, "not found"))
-        )
+        self.changes.append(("did add", rekey, get()))
 
     @contextmanager
-    def removed(self, key: str, old: object) -> Iterator[None]:
+    def removed(
+        self, key: tuple[object, ...], old: tuple[Any, ...]
+    ) -> Iterator[None]:
         """
         C{key} was removed for the given C{key}.
         """
-        self.changes.append(
-            ("will remove", key, getattr(self.example, key, None), old)
-        )
+        rekey, get = getfunc(key, self.example)
+        self.changes.append(("will remove", rekey, get(), old))
         yield
-        self.changes.append(
-            ("did remove", key, getattr(self.example, key, None), old)
-        )
+        self.changes.append(("did remove", rekey, get(), old))
 
     @contextmanager
-    def changed(self, key: str, old: object, new: object) -> Iterator[None]:
+    def changed(
+        self, key: tuple[object, ...], old: object, new: object
+    ) -> Iterator[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
         """
-        oldval = getattr(self.example, key, "not found before")
+        rekey, get = getfunc(key, self.example)
+        oldval = get("not found before")
         self.changes.append(("will change", key, oldval, old, new))
         yield
         self.changes.append(
-            (
-                "did change",
-                key,
-                getattr(self.example, key, "not found after"),
-                old,
-                new,
-            )
+            ("did change", key, get("not found after"), old, new)
         )
 
 
 @observable()
 class Example:
-    observer: Observer
+    observer: CustomObserver[Changes[str, object]]
     value1: str
     value2: int
     valueList: ObservableList[str]
@@ -306,9 +335,9 @@ class Example:
 
     @classmethod
     def new(
-        cls, observer: Changes[str, object], name: str, age: int
+        cls, observer: Changes[tuple[Any, ...], object], name: str, age: int
     ) -> Example:
-        p: PathObserver[object, object] = PathObserver(observer, "")
+        p: PathObserver[object] = PathObserver(observer, (), "")
         return cls(p, name, age, valueList=ObservableList(p.child("list"), []))
 
 

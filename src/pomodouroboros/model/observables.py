@@ -128,7 +128,9 @@ from typing import (
     MutableMapping,
     MutableSequence,
     Protocol,
+    Sequence,
     TypeVar,
+    TypeVarTuple,
     dataclass_transform,
     overload,
 )
@@ -617,8 +619,11 @@ class DispatchingObserver(Generic[Kcon, Vcon]):
             each(old, new)
 
 
+Ktup = TypeVarTuple("Ktup")
+
+
 @dataclass(repr=False)
-class PathObserver(Generic[Kcon, Vcon]):
+class PathObserver(Generic[*Ktup, Vcon]):
     """
     A L{PathObserver} implements L{Changes} for any key / value type and
     translates the key type to a string that represents a path.  You can add
@@ -653,69 +658,78 @@ class PathObserver(Generic[Kcon, Vcon]):
     and you will see that the changes are reflected with keys of 'a.aValue' and
     'a.b.bValue' respectively.
     """
-
-    wrapped: Changes[str, Vcon]
-    prefix: str
-    convert: Callable[[Kcon], str] = str
+    wrapped: Changes[tuple[object, ...], Vcon]
+    keyPrefix: tuple[*Ktup]
+    displayPrefix: str = ""
+    convert: Callable[[tuple[object, ...]], str] = str
     sep: str = "."
 
     def __repr__(self) -> str:
-        return f"{self.wrapped}/({self.prefix})"
+        return f"{self.wrapped}/({self.displayPrefix})"
 
-    def _keyPath(self, segment: str) -> str:
+    def _keyPath(self, segment: K) -> str:
+        segstr = str(segment)
         return (
-            self.sep.join([self.prefix, segment]) if self.prefix else segment
+            self.sep.join([self.displayPrefix, segstr])
+            if self.displayPrefix
+            else segstr
         )
 
-    def child(self, segment: str) -> PathObserver[Kcon, Vcon]:
+    def _key(self, segment: K) -> tuple[*Ktup, K]:
+        return (*self.keyPrefix, segment)
+
+    def child(self, segment: K) -> PathObserver[*Ktup, K, Vcon]:
         """
         create child path observer
         """
         return PathObserver(
             self.wrapped,
+            self._key(segment),
             self._keyPath(segment),
             self.convert,
             self.sep,
         )
 
     @contextmanager
-    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+    def added(self, key: K, new: Vcon) -> Iterator[None]:
         """
         C{value} was added for the given C{key}.
         """
-        with self.wrapped.added(self._keyPath(self.convert(key)), new):
+        with self.wrapped.added(self._key(key), new):
             yield
 
     @contextmanager
-    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+    def removed(self, key: K, old: Vcon) -> Iterator[None]:
         """
         C{key} was removed for the given C{key}.
         """
-        with self.wrapped.removed(self._keyPath(self.convert(key)), old):
+        with self.wrapped.removed(self._key(key), old):
             yield
 
     @contextmanager
-    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+    def changed(
+        self, key: K, old: Vcon, new: Vcon
+    ) -> Iterator[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
         """
-        with self.wrapped.changed(self._keyPath(self.convert(key)), old, new):
+        with self.wrapped.changed(self._key(key), old, new):
             yield
 
 
 @dataclass(repr=False)
-class AfterInitObserver:
+class AfterInitObserver(Generic[K]):
     """
     Interposer that handles attribute-added notifications during object
     initialization.
     """
 
-    _original: Changes[str, object] | None = None
+    _original: Changes[K, object] | None = None
 
     def __repr__(self) -> str:
         return repr(self._original) + "*"
 
-    def added(self, key: str, new: object) -> ContextManager[None]:
+    def added(self, key: K, new: object) -> ContextManager[None]:
         """
         C{value} was added for the given C{key}.
         """
@@ -725,7 +739,7 @@ class AfterInitObserver:
         else:
             return noop()
 
-    def removed(self, key: str, old: object) -> ContextManager[None]:
+    def removed(self, key: K, old: object) -> ContextManager[None]:
         """
         C{key} was removed for the given C{key}.
         """
@@ -736,7 +750,7 @@ class AfterInitObserver:
             return noop()
 
     def changed(
-        self, key: str, old: object, new: object
+        self, key: K, old: object, new: object
     ) -> ContextManager[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
@@ -754,15 +768,15 @@ class AfterInitObserver:
         self._original = None
 
 
-CN = TypeVar("CN", bound=Changes[str, object])
+CN = TypeVar("CN", bound=Changes[object, object])
 
 
 def build(
-    observed: Callable[[Changes[str, object]], V],
-    observer: Callable[[V], CN],
+    observed: Callable[[Changes[K, object]], V],
+    observer: Callable[[V], Changes[K, object]],
     *,
     strong: bool = False,
-) -> tuple[V, CN]:
+) -> tuple[V, Changes[K,object]]:
     """
     Build an observer that requires being told about the object it's observing.
 
@@ -772,7 +786,7 @@ def build(
         esoteric use-cases, however, a strong reference may be required, so
         passing C{strong=True} will omit the proxy.
     """
-    interpose = AfterInitObserver()
+    interpose: AfterInitObserver[K] = AfterInitObserver()
     observable: V = observed(interpose)
     o = interpose._original = observer(
         observable if strong else proxy(observable, interpose.finalize)
