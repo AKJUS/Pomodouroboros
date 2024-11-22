@@ -235,7 +235,7 @@ class DebugChanges(Generic[Kcon, Vcon]):
 
 _DebugChangesImplements: type[Changes[object, object]] = DebugChanges
 
-_ObjectObserverBound = Changes[str, object]
+_ObjectObserverBound = Changes[object, object]
 _O = TypeVar("_O", bound=_ObjectObserverBound)
 
 
