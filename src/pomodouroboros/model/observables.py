@@ -368,7 +368,23 @@ class ObservableList(MutableSequence[V]):
 
 
 @dataclass
-class MirrorDict(Generic[K, V]):
+class MirrorMapping(Generic[K, V]):
+    """
+    A L{MirrorMapping} is a L{Changes} observer, which, when observing a
+    L{ObservableDict}, can propagate all changes from that dictionary into
+    another mutable mapping.
+
+    This can be useful for:
+
+        - maintaining a plain dictionary for communication with other libraries
+          that need a copy of the state of an observable mapping for purposes
+          like serialization
+
+        - propagating changes from observable objects in this library to other
+          systems with their own observer pattern implementations, such as
+          mirroring into an NSMutableDictionary wrapped by PyObjC in order to
+          participate in KVO.
+    """
     mirror: MutableMapping[K, V]
 
     @contextmanager
@@ -387,7 +403,7 @@ class MirrorDict(Generic[K, V]):
         self.mirror[key] = new
 
 
-_MirrorDictImplements: type[Changes[str, float]] = MirrorDict[str, float]
+_MirrorMappingImplements: type[Changes[str, float]] = MirrorMapping[str, float]
 
 
 @dataclass

@@ -13,7 +13,7 @@ from ..observables import (
     Changes,
     DebugChanges,
     IgnoreChanges,
-    MirrorDict,
+    MirrorMapping,
     MirrorList,
     MirrorObject,
     MustSpecifyObserver,
@@ -161,11 +161,11 @@ class TestObservables(TC):
 
     def test_mirrorDict(self) -> None:
         """
-        A L{MirrorDict} can update from one dictionary to another.
+        A L{MirrorMapping} can update from one dictionary to another.
         """
         a: dict[str, float] = {}
         b: dict[str, float] = {}
-        o = ObservableDict(MirrorDict(b), a)
+        o = ObservableDict(MirrorMapping(b), a)
         o["hello"] = 1
         self.assertEqual(a, b)
         o["goodbye"] = 2
