@@ -7,8 +7,6 @@ from typing import Any, Callable, Iterator, Protocol, Sequence, TypeVar
 
 from twisted.trial.unittest import SynchronousTestCase as TC
 
-from pomodouroboros.model.observables import CustomObserver
-
 from ..observables import (
     Changes,
     DebugChanges,
@@ -24,6 +22,24 @@ from ..observables import (
     build,
     observable,
 )
+
+
+@observable()
+class Containee:
+    attribute: str = "old-value"
+    observer: Observer = IgnoreChanges
+
+
+@dataclass
+class NotObservable:
+    otherAttribute: str = "nevermind"
+
+
+@observable()
+class Container:
+    observer: Observer
+    containee: Containee
+    notObservable: NotObservable
 
 
 class TestObservables(TC):
@@ -149,7 +165,7 @@ class TestObservables(TC):
         a: list[str] = []
         b: list[str] = []
 
-        o = ObservableList(MirrorList(b), a)
+        o = ObservableList(MirrorSequence(b), a)
         o.append("1")
         self.assertEqual(a, b)
         o.insert(0, "2")
@@ -194,6 +210,24 @@ class TestObservables(TC):
         check()
         a.b = 1
         check()
+
+    def test_subObject(self) -> None:
+        """
+        testing testing
+        """
+        containee = Containee()
+        notObservable = NotObservable()
+        example, changes = build(
+            lambda observer: Container(
+                observer,
+                containee,
+                notObservable,
+            ),
+            lambda mycls: ChangeRecorder(mycls),
+            # strong=True,
+        )
+        containee.attribute = "new-value"
+        self.assertNotEqual(changes.changes, [])
 
     def test_hasDefault(self) -> None:
         self.assertEqual(
@@ -321,7 +355,7 @@ class ChangeRecorder:
 
 @observable()
 class Example:
-    observer: CustomObserver[Changes[str, object]]
+    observer: Observer
     value1: str
     value2: int
     valueList: ObservableList[str]

@@ -3,7 +3,6 @@ from typing import Iterator
 
 from pomodouroboros.model.observables import (
     Changes,
-    CustomObserver,
     Observer,
     observable,
 )
@@ -11,7 +10,7 @@ from pomodouroboros.model.observables import (
 
 @observable()
 class Box:
-    observer: CustomObserver[Changes[object, object]]
+    observer: Observer
     contents: int
 
 
@@ -40,7 +39,6 @@ box.contents += 1
 
 
 from pomodouroboros.model.observables import (
-    CustomObserver,
     ObservableList,
     PathObserver,
 )
@@ -48,7 +46,7 @@ from pomodouroboros.model.observables import (
 
 @observable()
 class Shelf:
-    observer: CustomObserver[PathObserver[object]]
+    observer: Observer
     boxes: ObservableList[Box]
 
 
