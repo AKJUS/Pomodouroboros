@@ -14,7 +14,7 @@ from ..observables import (
     DebugChanges,
     IgnoreChanges,
     MirrorMapping,
-    MirrorList,
+    MirrorSequence,
     MirrorObject,
     MustSpecifyObserver,
     ObservableDict,

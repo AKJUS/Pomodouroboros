@@ -407,7 +407,23 @@ _MirrorMappingImplements: type[Changes[str, float]] = MirrorMapping[str, float]
 
 
 @dataclass
-class MirrorList(Generic[V]):
+class MirrorSequence(Generic[V]):
+    """
+    A L{MirrorSequence} is a L{Changes} observer, which, when observing a
+    L{ObservableList}, can propagate all changes from that list into another
+    mutable sequence.
+
+    This can be useful for:
+
+        - maintaining a plain list for communication with other libraries that
+          need a copy of the state of an observable list for purposes like
+          serialization
+
+        - propagating changes from observable objects in this library to other
+          systems with their own observer pattern implementations, such as
+          mirroring into an NSMutableArray wrapped by PyObjC in order to
+          participate in KVO.
+    """
     mirror: MutableSequence[V]
 
     @contextmanager
@@ -433,7 +449,7 @@ class MirrorList(Generic[V]):
         self.mirror[key] = new  # type:ignore
 
 
-_MirrorListImplements: type[SequenceObserver[str]] = MirrorList[str]
+_MirrorSequenceImplements: type[SequenceObserver[str]] = MirrorSequence[str]
 
 
 @dataclass
