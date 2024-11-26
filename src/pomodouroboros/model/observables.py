@@ -37,19 +37,19 @@ implement one, the L{contextlib.contextmanager} decorator is helpful::
 
     class ShowChanges:
         @contextmanager
-        def added(self, key: str, new: object) -> Iterator[None]:
+        def added(self, key: object, new: object) -> Iterator[None]:
             print(f"will add {key} as {new}")
             yield
             print(f"did add {key} as {new}")
 
         @contextmanager
-        def removed(self, key: str, old: object) -> Iterator[None]:
+        def removed(self, key: object, old: object) -> Iterator[None]:
             print(f"will remove {key} (was {old})")
             yield
             print(f"did remove {key} (was {old})")
 
         @contextmanager
-        def changed(self, key: str, old: object, new: object) -> Iterator[None]:
+        def changed(self, key: object, old: object, new: object) -> Iterator[None]:
             print(f"will change {key} from {old} to {new}")
             yield
             print(f"did change {key} from {old} to {new}")
