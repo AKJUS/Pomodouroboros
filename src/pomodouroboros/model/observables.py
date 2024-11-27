@@ -115,12 +115,13 @@ import sys
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from functools import total_ordering
+from functools import partial, total_ordering
 from typing import (
     IO,
     Annotated,
     Any,
     Callable,
+    ClassVar,
     ContextManager,
     Generic,
     Iterable,
@@ -287,6 +288,7 @@ SequenceObserver = Changes[int | slice, V | Iterable[V]]
 class ObservableDict(MutableMapping[K, V]):
     observer: Changes[K, V]
     _storage: MutableMapping[K, V] = field(default_factory=dict)
+    __observable_observer__: ClassVar[str] = "observer"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ObservableDict):
@@ -325,6 +327,7 @@ class ObservableDict(MutableMapping[K, V]):
 class ObservableList(MutableSequence[V]):
     observer: SequenceObserver[V]
     _storage: MutableSequence[V] = field(default_factory=list)
+    __observable_observer__: ClassVar[str] = "observer"
 
     def __lt__(self, other: object) -> bool:
         if isinstance(other, ObservableList):
@@ -580,17 +583,11 @@ class _ObservableProperty:
             if self.field_name in instance.__dict__
             else notify.added(self.field_name, value)
         ):
-            print("try set", value, "observer")
-            try:
-                print("notify?", notify)
-                child = notify.child(self.field_name)
-                print("child?", child)
-                value.observer = child
-            except Exception:
-                print("nope")
-            else:
-                print("yup!")
+            observerSetter = _canSetObserver(value)
             instance.__dict__[self.field_name] = value
+            if observerSetter is not None:
+                c = notify.child(self.field_name)
+                observerSetter(c)
 
     def __delete__(self, instance: object) -> None:
         if self.field_name not in instance.__dict__:
@@ -663,6 +660,23 @@ def _shouldBeObservable(
     )
 
 
+_observabilityHint = "__observable_observer__"
+
+
+def _canSetObserver(
+    maybeObservable: object,
+) -> Callable[[Changes[Any, Any]], None] | None:
+    """
+    determine if the given instance is a real observer
+    """
+    observerName = getattr(maybeObservable, _observabilityHint, None)
+    if observerName is None:
+        return None
+    def _setObserver(anObserver: Changes[Any, Any])->None:
+        setattr(maybeObservable, observerName, anObserver)
+    return _setObserver
+
+
 @dataclass_transform(field_specifiers=(field,))
 def observable(repr: bool = True) -> Callable[[Ty], Ty]:
     """
@@ -691,6 +705,7 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
                 "you must annotate one attribute with Observer"
             )
 
+        setattr(cls, _observabilityHint, observerName)
         for k, v in originalAnnotations.items():
             if _shouldBeObservable(k, v, observerName):
                 setattr(cls, k, _ObservableProperty(observerName, k))
@@ -873,9 +888,10 @@ class AfterInitObserver(Generic[K]):
     """
 
     _original: Changes[K, object] | None = None
+    _childs: list[tuple[K, AfterInitObserver]] = field(default_factory=list)
 
     def __repr__(self) -> str:
-        return repr(self._original) + "*"
+        return repr(self._original) + "(after init)"
 
     def added(self, key: K, new: object) -> ContextManager[None]:
         """
@@ -920,7 +936,17 @@ class AfterInitObserver(Generic[K]):
             return self._original.child(key)
         else:
             # TODO: do we need to do something here when _original is set?
-            return IgnoreChanges
+            self._childs.append((key, aoi := AfterInitObserver[object]()))
+            return aoi
+
+    def _setOriginal(
+        self, newOriginal: Changes[K, object]
+    ) -> Changes[K, object]:
+        self._original = newOriginal
+        for k, child in self._childs:
+            child._setOriginal(newOriginal.child(k))
+            # TODO: clean up
+        return newOriginal
 
 
 CN = TypeVar("CN", bound=Changes[object, object])
@@ -943,7 +969,9 @@ def build(
     """
     interpose: AfterInitObserver[K] = AfterInitObserver()
     observable: V = observed(interpose)
-    o = interpose._original = observer(
-        observable if strong else proxy(observable, interpose.finalize)
+    o = interpose._setOriginal(
+        observer(
+            observable if strong else proxy(observable, interpose.finalize)
+        )
     )
     return observable, o

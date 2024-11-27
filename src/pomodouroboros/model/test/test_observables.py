@@ -88,26 +88,26 @@ class TestObservables(TC):
                 ("did change", ("value1",), "x", "John", "x"),
                 ("will change", ("value2",), 30, 30, 3),
                 ("did change", ("value2",), 3, 30, 3),
-                ("will add", ("list", 0), "not found"),
-                ("did add", ("list", 0), "not found"),
-                ("will add", ("list", 1), "not found"),
-                ("did add", ("list", 1), "not found"),
+                ("will add", ("valueList", 0), "not found"),
+                ("did add", ("valueList", 0), "not found"),
+                ("will add", ("valueList", 1), "not found"),
+                ("did add", ("valueList", 1), "not found"),
                 (
                     "will change",
-                    ("list", 1),
+                    ("valueList", 1),
                     "not found before",
                     "goodbye",
                     "goodbye!",
                 ),
                 (
                     "did change",
-                    ("list", 1),
+                    ("valueList", 1),
                     "not found after",
                     "goodbye",
                     "goodbye!",
                 ),
-                ("will remove", ("list", 1), "not found", "goodbye!"),
-                ("did remove", ("list", 1), "not found", "goodbye!"),
+                ("will remove", ("valueList", 1), "not found", "goodbye!"),
+                ("did remove", ("valueList", 1), "not found", "goodbye!"),
             ],
             cr.changes,  # type:ignore[attr-defined]
         )
@@ -142,8 +142,8 @@ class TestObservables(TC):
                 "did change ('value1',) from 'John' to 'new value'",
                 "will remove ('value1',) 'new value'",
                 "did remove ('value1',) 'new value'",
-                "will add ('list', 0) 'new list value'",
-                "did add ('list', 0) 'new list value'",
+                "will add ('valueList', 0) 'new list value'",
+                "did add ('valueList', 0) 'new list value'",
                 "",
             ]
         )
@@ -152,11 +152,11 @@ class TestObservables(TC):
             ("did add", "value1", "new value"),
             ("will remove", "value1", "new value", "new value"),
             ("did remove", "value1", "not found", "new value"),
-            ("will add", ("list", 0), "not found"),
-            ("did add", ("list", 0), "not found"),
+            ("will add", ("valueList", 0), "not found"),
+            ("did add", ("valueList", 0), "not found"),
         ]
-        self.assertEqual(cr.changes, expectedChanges)
-        self.assertEqual(io.getvalue(), expectedDebugOutput)
+        self.assertEqual(expectedChanges, cr.changes)
+        self.assertEqual(expectedDebugOutput, io.getvalue())
 
     def test_mirrorList(self) -> None:
         """
@@ -352,6 +352,43 @@ class ChangeRecorder:
             ("did change", key, get("not found after"), old, new)
         )
 
+    def child(self, key: tuple[object, ...]) -> Changes[Any, Any]:
+        return SubChangeRecorder(self, key, self.changes)
+
+
+@dataclass
+class SubChangeRecorder:
+    parent: ChangeRecorder
+    key: tuple[object]
+    changes: list[Any]
+
+    def added(
+        self, key: tuple[object, ...] | str, new: object
+    ) -> ContextManager[None]:
+        """
+        C{value} was added for the given C{key}.
+        """
+        return self.parent.added((*self.key, key), new)
+
+    def removed(
+        self, key: tuple[object, ...], old: tuple[Any, ...]
+    ) -> ContextManager[None]:
+        """
+        C{key} was removed for the given C{key}.
+        """
+        return self.parent.removed((*self.key, key), old)
+
+    def changed(
+        self, key: tuple[object, ...], old: object, new: object
+    ) -> ContextManager[None]:
+        """
+        C{value} was changed from C{old} to C{new} for the given C{key}.
+        """
+        return self.parent.changed((*self.key, key), old, new)
+
+    def child(self, key: tuple[object, ...]) -> Changes[Any, Any]:
+        return SubChangeRecorder(self, (*self.key, key), changes)
+
 
 @observable()
 class Example:
@@ -372,7 +409,7 @@ class Example:
         cls, observer: Changes[tuple[Any, ...], object], name: str, age: int
     ) -> Example:
         p: PathObserver[object] = PathObserver(observer, (), "")
-        return cls(p, name, age, valueList=ObservableList(p.child("list"), []))
+        return cls(p, name, age, valueList=ObservableList(IgnoreChanges, []))
 
 
 @observable()
