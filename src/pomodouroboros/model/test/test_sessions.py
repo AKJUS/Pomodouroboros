@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from datetime import datetime, time
-from typing import Callable, Iterator
+from typing import Any, Callable, Iterator
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
@@ -9,6 +9,8 @@ from fritter.boundaries import Scheduler
 from fritter.drivers.datetimes import DateTimeDriver
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
+
+from pomodouroboros.model.observables import Changes
 
 from ..sessions import ActiveSessionManager, DailySessionRule, Session, Weekday
 
@@ -59,6 +61,9 @@ class SessionStartEndSchedulingTests(TestCase):
             ) -> Iterator[None]:
                 yield
                 sessionChanges.append((key, old, new))
+
+            def child(self, key: object) -> Changes[Any, Any]:
+                return self
 
         asm = ActiveSessionManager.new(Observe(), dateScheduler)
         asm.rules.append(testingRule)
