@@ -1,11 +1,7 @@
 from contextlib import contextmanager
-from typing import Iterator
+from typing import Any, Iterator
 
-from pomodouroboros.model.observables import (
-    Changes,
-    Observer,
-    observable,
-)
+from pomodouroboros.model.observables import Changes, Observer, observable
 
 
 @observable()
@@ -33,15 +29,15 @@ class ShowChanges:
         yield
         print(f"did change {key} from {old} to {new}")
 
+    def child(self, key: object) -> Changes[Any, Any]:
+        return ShowChanges()
+
 
 box = Box(ShowChanges(), 1)
 box.contents += 1
 
 
-from pomodouroboros.model.observables import (
-    ObservableList,
-    PathObserver,
-)
+from pomodouroboros.model.observables import ObservableList, PathObserver
 
 
 @observable()
