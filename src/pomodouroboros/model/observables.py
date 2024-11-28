@@ -132,7 +132,6 @@ from typing import (
     Protocol,
     Sequence,
     TypeVar,
-    TypeVarTuple,
     dataclass_transform,
     overload,
 )
@@ -672,8 +671,10 @@ def _canSetObserver(
     observerName = getattr(maybeObservable, _observabilityHint, None)
     if observerName is None:
         return None
-    def _setObserver(anObserver: Changes[Any, Any])->None:
+
+    def _setObserver(anObserver: Changes[Any, Any]) -> None:
         setattr(maybeObservable, observerName, anObserver)
+
     return _setObserver
 
 
@@ -783,11 +784,8 @@ class DispatchingObserver(Generic[Kcon, Vcon]):
             each(old, new)
 
 
-Ktup = TypeVarTuple("Ktup")
-
-
 @dataclass(repr=False)
-class PathObserver(Generic[*Ktup, Vcon]):
+class PathObserver(Generic[Vcon]):
     """
     A L{PathObserver} implements L{Changes} for any key / value type and
     translates the key type to a string that represents a path.  You can add
@@ -824,7 +822,7 @@ class PathObserver(Generic[*Ktup, Vcon]):
     """
 
     wrapped: Changes[tuple[object, ...], Vcon]
-    keyPrefix: tuple[*Ktup]
+    keyPrefix: tuple[object, ...]
     displayPrefix: str = ""
     convert: Callable[[tuple[object, ...]], str] = str
     sep: str = "."
@@ -840,10 +838,10 @@ class PathObserver(Generic[*Ktup, Vcon]):
             else segstr
         )
 
-    def _key(self, segment: K) -> tuple[*Ktup, K]:
+    def _key(self, segment: K) -> tuple[object, ...]:
         return (*self.keyPrefix, segment)
 
-    def child(self, segment: K) -> PathObserver[*Ktup, K, Vcon]:
+    def child(self, segment: K) -> PathObserver[Vcon]:
         """
         create child path observer
         """
@@ -881,19 +879,21 @@ class PathObserver(Generic[*Ktup, Vcon]):
 
 
 @dataclass(repr=False)
-class AfterInitObserver(Generic[K]):
+class AfterInitObserver:
     """
     Interposer that handles attribute-added notifications during object
     initialization.
     """
 
-    _original: Changes[K, object] | None = None
-    _childs: list[tuple[K, AfterInitObserver]] = field(default_factory=list)
+    _original: Changes[object, object] | None = None
+    _childs: list[tuple[object, AfterInitObserver]] = field(
+        default_factory=list
+    )
 
     def __repr__(self) -> str:
         return repr(self._original) + "(after init)"
 
-    def added(self, key: K, new: object) -> ContextManager[None]:
+    def added(self, key: object, new: object) -> ContextManager[None]:
         """
         C{value} was added for the given C{key}.
         """
@@ -903,7 +903,7 @@ class AfterInitObserver(Generic[K]):
         else:
             return noop()
 
-    def removed(self, key: K, old: object) -> ContextManager[None]:
+    def removed(self, key: object, old: object) -> ContextManager[None]:
         """
         C{key} was removed for the given C{key}.
         """
@@ -914,7 +914,7 @@ class AfterInitObserver(Generic[K]):
             return noop()
 
     def changed(
-        self, key: K, old: object, new: object
+        self, key: object, old: object, new: object
     ) -> ContextManager[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
@@ -931,33 +931,32 @@ class AfterInitObserver(Generic[K]):
         """
         self._original = None
 
-    def child(self, key: K) -> Changes[Any, Any]:
+    def child(self, key: object) -> Changes[Any, Any]:
         if self._original is not None:
             return self._original.child(key)
         else:
             # TODO: do we need to do something here when _original is set?
-            self._childs.append((key, aoi := AfterInitObserver[object]()))
+            self._childs.append((key, aoi := AfterInitObserver()))
             return aoi
 
-    def _setOriginal(
-        self, newOriginal: Changes[K, object]
-    ) -> Changes[K, object]:
+    def _setOriginal(self, newOriginal: Changes[object, object]) -> None:
         self._original = newOriginal
         for k, child in self._childs:
             child._setOriginal(newOriginal.child(k))
             # TODO: clean up
-        return newOriginal
 
 
-CN = TypeVar("CN", bound=Changes[object, object])
+_AfterInitObserver: type[Changes[object, object]] = AfterInitObserver
+
+CN = TypeVar("CN", bound=Changes[Any, Any])
 
 
 def build(
-    observed: Callable[[Changes[K, object]], V],
-    observer: Callable[[V], Changes[K, object]],
+    observed: Callable[[Changes[object, object]], V],
+    observer: Callable[[V], CN],
     *,
     strong: bool = False,
-) -> tuple[V, Changes[K, object]]:
+) -> tuple[V, CN]:
     """
     Build an observer that requires being told about the object it's observing.
 
@@ -967,11 +966,10 @@ def build(
         esoteric use-cases, however, a strong reference may be required, so
         passing C{strong=True} will omit the proxy.
     """
-    interpose: AfterInitObserver[K] = AfterInitObserver()
+    interpose: AfterInitObserver = AfterInitObserver()
     observable: V = observed(interpose)
-    o = interpose._setOriginal(
-        observer(
-            observable if strong else proxy(observable, interpose.finalize)
-        )
+    o = observer(
+        observable if strong else proxy(observable, interpose.finalize)
     )
+    interpose._setOriginal(o)
     return observable, o

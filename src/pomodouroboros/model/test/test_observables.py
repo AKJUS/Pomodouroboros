@@ -3,7 +3,15 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Callable, Iterator, Protocol, Sequence, TypeVar
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Iterator,
+    Protocol,
+    Sequence,
+    TypeVar,
+)
 
 from twisted.trial.unittest import SynchronousTestCase as TC
 
@@ -12,8 +20,8 @@ from ..observables import (
     DebugChanges,
     IgnoreChanges,
     MirrorMapping,
-    MirrorSequence,
     MirrorObject,
+    MirrorSequence,
     MustSpecifyObserver,
     ObservableDict,
     ObservableList,
@@ -75,7 +83,7 @@ class TestObservables(TC):
             lambda mycls: ChangeRecorder(mycls),
             # strong=True,
         )
-        self.assertEqual(cr.changes, [])  # type:ignore[attr-defined]
+        self.assertEqual(cr.changes, [])
         example.value1 = "x"
         example.value2 = 3
         example.valueList.append("hello")
@@ -109,7 +117,7 @@ class TestObservables(TC):
                 ("will remove", ("valueList", 1), "not found", "goodbye!"),
                 ("did remove", ("valueList", 1), "not found", "goodbye!"),
             ],
-            cr.changes,  # type:ignore[attr-defined]
+            cr.changes,
         )
 
     def test_debug(self) -> None:
@@ -129,7 +137,7 @@ class TestObservables(TC):
         # can't express a bound that DebugChanges[K, V].original is a TypeVar
         # with its own type but also bounded by Changes[K, V]
         # https://github.com/python/typing/issues/548
-        cr: ChangeRecorder = debug.original  # type:ignore[attr-defined]
+        cr: ChangeRecorder = debug.original  # type:ignore[assignment]
 
         example.value1 = "new value"
         del example.value1
@@ -352,14 +360,14 @@ class ChangeRecorder:
             ("did change", key, get("not found after"), old, new)
         )
 
-    def child(self, key: tuple[object, ...]) -> Changes[Any, Any]:
-        return SubChangeRecorder(self, key, self.changes)
+    def child(self, key: object) -> Changes[Any, Any]:
+        return SubChangeRecorder(self, (key,), self.changes)
 
 
 @dataclass
 class SubChangeRecorder:
     parent: ChangeRecorder
-    key: tuple[object]
+    key: tuple[object, ...]
     changes: list[Any]
 
     def added(
@@ -387,7 +395,7 @@ class SubChangeRecorder:
         return self.parent.changed((*self.key, key), old, new)
 
     def child(self, key: tuple[object, ...]) -> Changes[Any, Any]:
-        return SubChangeRecorder(self, (*self.key, key), changes)
+        return SubChangeRecorder(self.parent, (*self.key, key), self.changes)
 
 
 @observable()
@@ -408,7 +416,9 @@ class Example:
     def new(
         cls, observer: Changes[tuple[Any, ...], object], name: str, age: int
     ) -> Example:
-        p: PathObserver[object] = PathObserver(observer, (), "")
+        # p: PathObserver[object] = PathObserver(observer, (), "")
+        what: Any = observer
+        p: PathObserver[object] = PathObserver(what, (), "")
         return cls(p, name, age, valueList=ObservableList(IgnoreChanges, []))
 
 
