@@ -23,6 +23,7 @@ from fritter.repeat.rules.datetimes import EachDTRule, EachWeekOn
 from twisted.internet.defer import Deferred
 
 from pomodouroboros.model.observables import (
+    Changes,
     IgnoreChanges,
     ObservableList,
     Observer,
@@ -195,12 +196,19 @@ class ActiveSessionManager:
         yield
         self._reschedule()
 
+    def child(self, key: object) -> Changes[object, object]:
+        return IgnoreChanges
+
     @classmethod
     def new(
-        cls, observer: Observer, scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+        cls,
+        observer: Observer,
+        scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int],
     ) -> ActiveSessionManager:
         rules: ObservableList[SessionRule] = ObservableList(IgnoreChanges)
-        self = cls(None, observer, rules, scheduler, [], Async(TwistedAsyncDriver()))
+        self = cls(
+            None, observer, rules, scheduler, [], Async(TwistedAsyncDriver())
+        )
         rules.observer = self
         self._reschedule()
         return self
