@@ -1,0 +1,3 @@
+#!/bin/sh
+
+pip-compile --strip-extras --quiet --upgrade --allow-unsafe --no-emit-index-url
