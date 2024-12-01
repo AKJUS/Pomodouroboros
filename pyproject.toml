@@ -1,9 +1,7 @@
 [build-system]
 requires = [
   "setuptools>=42",
-  "py2app",
   "wheel",
-  "quickmacapp",
 ]
 build-backend = "setuptools.build_meta"
 

@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+from math import inf
 from functools import singledispatch
 from json import dump, load
 from os import makedirs, replace
 from os.path import basename, dirname, exists, expanduser, join
-from typing import TypeAlias, cast
+from typing import Callable, TypeAlias, cast
+
+from fritter.boundaries import Scheduler
+from fritter.drivers.memory import MemoryDriver
+from fritter.scheduler import schedulerFromDriver
+
+from pomodouroboros.model.intervals import Idle
 
 from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
@@ -107,7 +114,14 @@ def nexusFromJSON(
         loadInterval(interval) for interval in saved["currentStreak"]
     ]
 
+    lastUpdateTime = saved["lastUpdateTime"]
+    scheduler: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+        driver := MemoryDriver()
+    )
+    driver.advance(lastUpdateTime)
     nexus = Nexus(
+        scheduler,
+        driver,
         _lastIntentionID=int(saved["lastIntentionID"]),
         _intentions=intentions,
         _upcomingDurations=iter(
@@ -132,7 +146,8 @@ def nexusFromJSON(
             ],
         ),
         _interfaceFactory=userInterfaceFactory,
-        _lastUpdateTime=saved["lastUpdateTime"],
+        _lastUpdateTime=lastUpdateTime,
+        _liveInterval=Idle(0, inf),
     )
     return nexus
 
@@ -284,7 +299,16 @@ def loadDefaultNexus(
         )
         loaded.advanceToTime(currentTime)
         return loaded
-    return Nexus(userInterfaceFactory, 0)
+    # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
+    # interval
+    currentInterval = Idle(startTime=0.0, endTime=inf)
+    return Nexus(
+        schedulerFromDriver(driver := MemoryDriver()),
+        driver,
+        userInterfaceFactory,
+        0,
+        _liveInterval=currentInterval,
+    )
 
 
 def saveDefaultNexus(nexus: Nexus) -> None:

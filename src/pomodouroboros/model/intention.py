@@ -48,9 +48,7 @@ class Intention:
 
     def _compref(self) -> dict[str, object]:
         return asdict(
-            # https://github.com/python/mypy/pull/15962
-            # https://github.com/python/mypy/issues/16155
-            replace(  # type:ignore[misc]
+            replace(
                 self,
                 pomodoros=[
                     # we're just going to dump it into a dict here anyway, so
@@ -58,11 +56,11 @@ class Intention:
                     replace(each, intention=None)  # type:ignore[arg-type]
                     for each in self.pomodoros
                 ],
-                id=None,
+                id=None,        # type:ignore[arg-type]
             )
         )
 
-    def __eq__(self, other: object):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Intention):
             return NotImplemented
         return self._compref() == other._compref()

@@ -1,15 +1,127 @@
 # -*- test-case-name: pomodouroboros.model.test.test_observables -*-
+
+"""
+Create observable mutable objects, for interactive user interfaces to present
+changes in real time.
+
+This is a Python native way to achieve something similar to
+U{NSKeyValueObserving
+<https://developer.apple.com/documentation/objectivec/nsobject/nskeyvalueobserving?language=objc#>};
+in addition to being a generally nice way to reflect changes, in the mac UI for
+Pomodouroboros, we need to mirror changes into PyObjC model classes for the UI
+to observe.
+
+However, unlike Objective C, python does not allow for monkeypatching the
+internals of C{object}, nor does it provide a native attribute-change
+observation feature in the language itself, so all these classes must be
+opt-in.
+
+To declare a class whose changes may be observable, use the L{observable}
+decorator.  This creates a dataclass, like so::
+
+    from pomodouroboros.model.observables import observable, Observer
+
+    @observable()
+    class Box:
+        observer: Observer
+        contents: int
+
+Then, to observe the changes, construct your newly-created dataclass with an
+object that conforms to the Observer protocol.  Observers have 3 methods:
+added, removed, and changed; each of these methods returns a contextmanager,
+which will be entered before the change, then exited after the change.  To
+implement one, the L{contextlib.contextmanager} decorator is helpful::
+
+    from contextlib import contextmanager
+    from typing import Iterator
+
+    class ShowChanges:
+        @contextmanager
+        def added(self, key: object, new: object) -> Iterator[None]:
+            print(f"will add {key} as {new}")
+            yield
+            print(f"did add {key} as {new}")
+
+        @contextmanager
+        def removed(self, key: object, old: object) -> Iterator[None]:
+            print(f"will remove {key} (was {old})")
+            yield
+            print(f"did remove {key} (was {old})")
+
+        @contextmanager
+        def changed(self, key: object, old: object, new: object) -> Iterator[None]:
+            print(f"will change {key} from {old} to {new}")
+            yield
+            print(f"did change {key} from {old} to {new}")
+
+Put them together by constructing them::
+
+    box = Box(ShowChanges(), 1)
+
+And then observe the change::
+
+    box.contents += 1
+
+Which should print::
+
+    will add contents as 1
+    did add contents as 1
+    will change contents from 1 to 2
+    did change contents from 1 to 2
+
+This works for the attributes on a single object; however, often you will want
+to observe hierarchies of objects, with other mutable containers within it,
+such as lists and dictionaries.  To do this, you can construct a parallel
+hierarchy of observables with a L{PathObserver}.  Let's put our box on a shelf,
+with some other boxes::
+
+    from pomodouroboros.model.observables import PathObserver, CustomObserver, ObservableList
+
+    @observable()
+    class Shelf:
+        observer: CustomObserver[PathObserver[object, object]]
+        boxes: ObservableList[Box]
+
+    def newShelf(observer: Observer) -> Shelf:
+        p = PathObserver(observer, "")
+        return Shelf(p, ObservableList(p.child("boxes")))
+
+    shelf = newShelf(ShowChanges())
+    shelf.boxes.append(box)
+
+You can then see the box being added::
+
+    will add boxes.0 as Box(observer=<__main__.ShowChanges object at 0x10337e630>, contents=2)
+    did add boxes.0 as Box(observer=<__main__.ShowChanges object at 0x10337e630>, contents=2)
+
+Note, however, that if you want your observers to see changes to boxes, you
+must also change your box's observer::
+
+    box.observer = shelf.observer.child("boxes").child("0")
+
+and now those changes will show up to the path observer::
+
+    box.contents += 1
+
+which will show up as::
+
+    will change boxes.0.contents from 2 to 3
+    did change boxes.0.contents from 2 to 3
+"""
+
 from __future__ import annotations
 
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from functools import total_ordering
+from functools import partial, total_ordering
 from typing import (
     IO,
     Annotated,
+    Any,
     Callable,
+    ClassVar,
     ContextManager,
     Generic,
     Iterable,
@@ -18,6 +130,7 @@ from typing import (
     MutableMapping,
     MutableSequence,
     Protocol,
+    Sequence,
     TypeVar,
     dataclass_transform,
     overload,
@@ -67,6 +180,17 @@ class Changes(Protocol[Kcon, Vcon]):
         C{value} was changed from C{old} to C{new} for the given C{key}.
         """
 
+    def child(self, key: Kcon) -> Changes[Any, Any]:
+        """
+        Provide a L{Changes} for observing changes to the sub-object at C{key}.
+
+        @note: the type signature here is loose because the structure of C{key}
+            will often imply a specific type; for example, if you have an
+            attribute C{values: }L{ObservableList}C{[float]}, then
+            C{observer.child("values")} ought to be able to return a
+            C{Changes[int,float]} without complaint from the type system.
+        """
+
 
 @contextmanager
 def noop() -> Iterator[None]:
@@ -89,6 +213,10 @@ class IgnoreChanges:
     ) -> ContextManager[None]:
         return noop()
 
+    @classmethod
+    def child(cls, key: object) -> Changes[Any, Any]:
+        return cls
+
 
 _IgnoreChangesImplements: type[Changes[object, object]] = IgnoreChanges
 _IgnoreChangesImplementsClass: Changes[object, object] = IgnoreChanges
@@ -98,6 +226,7 @@ _IgnoreChangesImplementsClass: Changes[object, object] = IgnoreChanges
 class DebugChanges(Generic[Kcon, Vcon]):
     original: Changes[Kcon, Vcon] = IgnoreChanges
     stream: IO[str] = field(default_factory=lambda: sys.stderr)
+    prefix: Sequence[object] = ()
 
     @contextmanager
     def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
@@ -120,6 +249,13 @@ class DebugChanges(Generic[Kcon, Vcon]):
             yield
         self.stream.write(f"did change {key!r} from {old!r} to {new!r}\n")
 
+    def child(self, key: Kcon) -> Changes[Any, Any]:
+        return DebugChanges(
+            self.original.child(key),
+            self.stream,
+            prefix=[*self.prefix, key],
+        )
+
 
 _DebugChangesImplements: type[Changes[object, object]] = DebugChanges
 
@@ -127,15 +263,23 @@ _ObjectObserverBound = Changes[str, object]
 _O = TypeVar("_O", bound=_ObjectObserverBound)
 
 
-class _ObserverMarker(Enum):
-    sentinel = auto()
+class ObserverAnnotation(Enum):
+    """
+    An L{ObserverAnnotation} is a value that can be used in an L{Annotated}
+    attribute to indicate the role of that attribute.  Currently, its one value
+    is L{ObserverAnnotation.attribute}, which simply means "this attribute is
+    the observer for this class, and all changes will be sent to it via the
+    L{Changes} protocol."
+    """
+
+    attribute = auto()
+    "Annotation value indicating that this attribute is the observer attribute."
 
 
-_ItsTheObserver = _ObserverMarker.sentinel
+ObserverAttribute = Annotated[_O, ObserverAnnotation.attribute]
+_AnnotatedType = type(ObserverAttribute)
+Observer = ObserverAttribute[_ObjectObserverBound]
 
-CustomObserver = Annotated[_O, _ItsTheObserver]
-_AnnotatedType = type(CustomObserver)
-Observer = CustomObserver[_ObjectObserverBound]
 SequenceObserver = Changes[int | slice, V | Iterable[V]]
 
 
@@ -143,6 +287,7 @@ SequenceObserver = Changes[int | slice, V | Iterable[V]]
 class ObservableDict(MutableMapping[K, V]):
     observer: Changes[K, V]
     _storage: MutableMapping[K, V] = field(default_factory=dict)
+    __observable_observer__: ClassVar[str] = "observer"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ObservableDict):
@@ -181,6 +326,7 @@ class ObservableDict(MutableMapping[K, V]):
 class ObservableList(MutableSequence[V]):
     observer: SequenceObserver[V]
     _storage: MutableSequence[V] = field(default_factory=list)
+    __observable_observer__: ClassVar[str] = "observer"
 
     def __lt__(self, other: object) -> bool:
         if isinstance(other, ObservableList):
@@ -202,12 +348,10 @@ class ObservableList(MutableSequence[V]):
         return repr(self._storage) + "~(observable)"
 
     @overload
-    def __setitem__(self, index: int, value: V) -> None:
-        ...
+    def __setitem__(self, index: int, value: V) -> None: ...
 
     @overload
-    def __setitem__(self, index: slice, value: Iterable[V]) -> None:
-        ...
+    def __setitem__(self, index: slice, value: Iterable[V]) -> None: ...
 
     def __setitem__(self, index: int | slice, value: V | Iterable[V]) -> None:
         with (
@@ -242,12 +386,10 @@ class ObservableList(MutableSequence[V]):
 
     # proxied read operations
     @overload
-    def __getitem__(self, index: int) -> V:
-        ...
+    def __getitem__(self, index: int) -> V: ...
 
     @overload
-    def __getitem__(self, index: slice) -> MutableSequence[V]:
-        ...
+    def __getitem__(self, index: slice) -> MutableSequence[V]: ...
 
     def __getitem__(self, index: slice | int) -> V | MutableSequence[V]:
         return self._storage.__getitem__(index)
@@ -260,7 +402,24 @@ class ObservableList(MutableSequence[V]):
 
 
 @dataclass
-class MirrorDict(Generic[K, V]):
+class MirrorMapping(Generic[K, V]):
+    """
+    A L{MirrorMapping} is a L{Changes} observer, which, when observing a
+    L{ObservableDict}, can propagate all changes from that dictionary into
+    another mutable mapping.
+
+    This can be useful for:
+
+        - maintaining a plain dictionary for communication with other libraries
+          that need a copy of the state of an observable mapping for purposes
+          like serialization
+
+        - propagating changes from observable objects in this library to other
+          systems with their own observer pattern implementations, such as
+          mirroring into an NSMutableDictionary wrapped by PyObjC in order to
+          participate in KVO.
+    """
+
     mirror: MutableMapping[K, V]
 
     @contextmanager
@@ -278,12 +437,37 @@ class MirrorDict(Generic[K, V]):
         yield
         self.mirror[key] = new
 
+    def child(self, key: K) -> Changes[Any, Any]:
+        # TODO: clients should be able to pass a function that provides a
+        # sub-observer type for objects of type V (assuming that V is itself
+        # observable), so that when we get a change notification for a
+        # particular (attribute,index) of a particular key, we relay that
+        # change down through our mirrored dictionary
+        return IgnoreChanges
 
-_MirrorDictImplements: type[Changes[str, float]] = MirrorDict[str, float]
+
+_MirrorMappingImplements: type[Changes[str, float]] = MirrorMapping[str, float]
 
 
 @dataclass
-class MirrorList(Generic[V]):
+class MirrorSequence(Generic[V]):
+    """
+    A L{MirrorSequence} is a L{Changes} observer, which, when observing a
+    L{ObservableList}, can propagate all changes from that list into another
+    mutable sequence.
+
+    This can be useful for:
+
+        - maintaining a plain list for communication with other libraries that
+          need a copy of the state of an observable list for purposes like
+          serialization
+
+        - propagating changes from observable objects in this library to other
+          systems with their own observer pattern implementations, such as
+          mirroring into an NSMutableArray wrapped by PyObjC in order to
+          participate in KVO.
+    """
+
     mirror: MutableSequence[V]
 
     @contextmanager
@@ -308,12 +492,41 @@ class MirrorList(Generic[V]):
         yield
         self.mirror[key] = new  # type:ignore
 
+    def child(self, key: int | slice) -> Changes[Any, Any]:
+        # TODO: clients should be able to pass a function that provides a
+        # sub-observer type for objects of type V (assuming that V is itself
+        # observable), so that when we get a change notification for a
+        # particular (attribute,index) of a particular key, we relay that
+        # change down through our mirrored dictionary
 
-_MirrorListImplements: type[SequenceObserver[str]] = MirrorList[str]
+        # TODO: upon insertion and removal, the indexes of the sub-observer
+        # need to be able to change somehow.
+        return IgnoreChanges
+
+
+_MirrorSequenceImplements: type[SequenceObserver[str]] = MirrorSequence[str]
 
 
 @dataclass
 class MirrorObject:
+    """
+    A L{MirrorObject} is a L{Changes} observer, which, when observing any
+    instance of an @L{observable} class, can propagate all attribute changes
+    from the observed object into another object.
+
+    This can be useful for:
+
+        - propagating changes from observable objects in this library to other
+          systems with their own observer pattern implementations, such as
+          mirroring into any NSObject with its attributes declared as
+          L{objc.object_property} wrapped by PyObjC in order to participate in
+          KVO.
+
+        - wrapping a mutable object from a library for debugging purposes, to
+          observe changes that are made to it via any code the mirror is passed
+          to.
+    """
+
     mirror: object
     nameTranslation: Mapping[str, str]
 
@@ -332,9 +545,23 @@ class MirrorObject:
         yield
         setattr(self.mirror, self.nameTranslation.get(key, key), new)
 
+    def child(self, key: str) -> Changes[Any, Any]:
+        # TODO: should not actually ignore changes on sub-objects
+        return IgnoreChanges
+
+
+_MirrorObjectImplements: type[Changes[str, object]] = MirrorObject
+
 
 @dataclass
-class ObservableProperty:
+class _ObservableProperty:
+    """
+    An L{_ObservableProperty} is the descriptor placed into a class dictionary
+    by the L{observable} decorator.  This is not visible at type-time, only at
+    runtime, to catch attriubte get/set/delete calls and relay them to
+    observers.
+    """
+
     observer_name: str
     field_name: str
 
@@ -348,12 +575,18 @@ class ObservableProperty:
 
         # I need to avoid invoking the observer if the instance isn't fully
         # initialized
-        with notify.changed(
-            self.field_name, instance.__dict__[self.field_name], value
-        ) if self.field_name in instance.__dict__ else notify.added(
-            self.field_name, value
+        with (
+            notify.changed(
+                self.field_name, instance.__dict__[self.field_name], value
+            )
+            if self.field_name in instance.__dict__
+            else notify.added(self.field_name, value)
         ):
+            observerSetter = _canSetObserver(value)
             instance.__dict__[self.field_name] = value
+            if observerSetter is not None:
+                c = notify.child(self.field_name)
+                observerSetter(c)
 
     def __delete__(self, instance: object) -> None:
         if self.field_name not in instance.__dict__:
@@ -366,6 +599,13 @@ class ObservableProperty:
 
 
 def _unstringify(cls: type, annotation: object) -> object:
+    """
+    Evaluate the given C{annotatation}, if it is a string, given the namespace
+    of the type object where it is declared.
+
+    This is very much like L{inspect.get_annotations}C{(..., eval_str=True)},
+    but respecting the class dictionary namespace.
+    """
     if not isinstance(annotation, str):
         return annotation
     try:
@@ -377,10 +617,15 @@ def _unstringify(cls: type, annotation: object) -> object:
 
 
 def _isObserver(annotation: object) -> bool:
+    """
+    Does this C{annotation} carry the L{ObserverAnnotation} annotation,
+    indicating that the attribute this annotates is the observer which should
+    be skipped for the purposes of notifying about changes?
+    """
     if isinstance(annotation, _AnnotatedType):
         # does the standard lib have no nicer way to ask 'is this `Annotated`'?
         for element in annotation.__metadata__:
-            if element is _ItsTheObserver:
+            if element is ObserverAnnotation.attribute:
                 return True
     return False
 
@@ -395,8 +640,56 @@ class MustSpecifyObserver(Exception):
     """
 
 
+def _shouldBeObservable(
+    key: str, annotation: object, observerName: str
+) -> bool:
+    """
+    Should the attribute with the given name and annotation emit messages to
+    the observer, for an L{observable} class with an observer named
+    C{observerName}.
+    """
+    return (
+        key
+        != observerName  # the observer should not be able to observe the
+        # observer changing
+    ) and (
+        not key.startswith(
+            "_"
+        )  # TODO: test for private attribute observability
+    )
+
+
+_observabilityHint = "__observable_observer__"
+
+
+def _canSetObserver(
+    maybeObservable: object,
+) -> Callable[[Changes[Any, Any]], None] | None:
+    """
+    determine if the given instance is a real observer
+    """
+    observerName = getattr(maybeObservable, _observabilityHint, None)
+    if observerName is None:
+        return None
+
+    def _setObserver(anObserver: Changes[Any, Any]) -> None:
+        setattr(maybeObservable, observerName, anObserver)
+
+    return _setObserver
+
+
 @dataclass_transform(field_specifiers=(field,))
 def observable(repr: bool = True) -> Callable[[Ty], Ty]:
+    """
+    Decorate a dataclass to indicate that it may be observed by its observer
+    attribute.  This is a dataclass transform that uses the standard library
+    L{dataclass} type, and thus the standard library L{field} function for
+    field metadata.
+
+    Indicate which attribute represents the observer by using the
+    L{ObserverAttribute} annotation.
+    """
+
     def make_observable(cls: Ty) -> Ty:
         observerName = None
         originalAnnotations = cls.__annotations__
@@ -413,9 +706,10 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
                 "you must annotate one attribute with Observer"
             )
 
+        setattr(cls, _observabilityHint, observerName)
         for k, v in originalAnnotations.items():
-            if k != observerName:
-                setattr(cls, k, ObservableProperty(observerName, k))
+            if _shouldBeObservable(k, v, observerName):
+                setattr(cls, k, _ObservableProperty(observerName, k))
         if observerIndex != 0:
             # If the observer is not specified as the first argument, then the
             # dataclass-generated __init__ is going to assign other attributes
@@ -428,8 +722,70 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
     return make_observable
 
 
+@dataclass
+class DispatchingObserver(Generic[Kcon, Vcon]):
+    _adders: dict[
+        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
+    ]
+    _removers: dict[
+        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
+    ]
+    _changers: dict[
+        Kcon,
+        tuple[
+            list[Callable[[Vcon, Vcon], None]],
+            list[Callable[[Vcon, Vcon], None]],
+        ],
+    ]
+
+    def beforeAdd(self, key: Kcon) -> None:
+        pass
+
+    def afterAdd(self, key: Kcon) -> None:
+        pass
+
+    def beforeRemove(self, key: Kcon) -> None:
+        pass
+
+    def afterRemove(self, key: Kcon) -> None:
+        pass
+
+    def beforeChange(self, key: Kcon) -> None:
+        pass
+
+    def afterChange(self, key: Kcon) -> None:
+        pass
+
+    @contextmanager
+    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+        before, after = self._adders.get(key, ([], []))
+        for each in before:
+            each(new)
+        yield
+        for each in after:
+            each(new)
+
+    @contextmanager
+    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+        before, after = self._removers.get(key, ([], []))
+        for each in before:
+            each(old)
+        yield
+        for each in after:
+            each(old)
+
+    @contextmanager
+    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+        before, after = self._changers.get(key, ([], []))
+        for each in before:
+            each(old, new)
+        yield
+        for each in after:
+            each(old, new)
+
+
 @dataclass(repr=False)
-class PathObserver(Generic[Kcon, Vcon]):
+class PathObserver(Generic[Vcon]):
     """
     A L{PathObserver} implements L{Changes} for any key / value type and
     translates the key type to a string that represents a path.  You can add
@@ -465,52 +821,60 @@ class PathObserver(Generic[Kcon, Vcon]):
     'a.b.bValue' respectively.
     """
 
-    wrapped: Changes[str, Vcon]
-    prefix: str
-    convert: Callable[[Kcon], str] = str
+    wrapped: Changes[tuple[object, ...], Vcon]
+    keyPrefix: tuple[object, ...]
+    displayPrefix: str = ""
+    convert: Callable[[tuple[object, ...]], str] = str
     sep: str = "."
 
     def __repr__(self) -> str:
-        return f"{self.wrapped}/({self.prefix})"
+        return f"{self.wrapped}/({self.displayPrefix})"
 
-    def _keyPath(self, segment: str) -> str:
+    def _keyPath(self, segment: K) -> str:
+        segstr = str(segment)
         return (
-            self.sep.join([self.prefix, segment]) if self.prefix else segment
+            self.sep.join([self.displayPrefix, segstr])
+            if self.displayPrefix
+            else segstr
         )
 
-    def child(self, segment: str) -> PathObserver[Kcon, Vcon]:
+    def _key(self, segment: K) -> tuple[object, ...]:
+        return (*self.keyPrefix, segment)
+
+    def child(self, segment: K) -> PathObserver[Vcon]:
         """
         create child path observer
         """
         return PathObserver(
             self.wrapped,
+            self._key(segment),
             self._keyPath(segment),
             self.convert,
             self.sep,
         )
 
     @contextmanager
-    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+    def added(self, key: K, new: Vcon) -> Iterator[None]:
         """
         C{value} was added for the given C{key}.
         """
-        with self.wrapped.added(self._keyPath(self.convert(key)), new):
+        with self.wrapped.added(self._key(key), new):
             yield
 
     @contextmanager
-    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+    def removed(self, key: K, old: Vcon) -> Iterator[None]:
         """
         C{key} was removed for the given C{key}.
         """
-        with self.wrapped.removed(self._keyPath(self.convert(key)), old):
+        with self.wrapped.removed(self._key(key), old):
             yield
 
     @contextmanager
-    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+    def changed(self, key: K, old: Vcon, new: Vcon) -> Iterator[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
         """
-        with self.wrapped.changed(self._keyPath(self.convert(key)), old, new):
+        with self.wrapped.changed(self._key(key), old, new):
             yield
 
 
@@ -521,12 +885,15 @@ class AfterInitObserver:
     initialization.
     """
 
-    _original: Changes[str, object] | None = None
+    _original: Changes[object, object] | None = None
+    _childs: list[tuple[object, AfterInitObserver]] = field(
+        default_factory=list
+    )
 
     def __repr__(self) -> str:
-        return repr(self._original) + "*"
+        return repr(self._original) + "(after init)"
 
-    def added(self, key: str, new: object) -> ContextManager[None]:
+    def added(self, key: object, new: object) -> ContextManager[None]:
         """
         C{value} was added for the given C{key}.
         """
@@ -536,7 +903,7 @@ class AfterInitObserver:
         else:
             return noop()
 
-    def removed(self, key: str, old: object) -> ContextManager[None]:
+    def removed(self, key: object, old: object) -> ContextManager[None]:
         """
         C{key} was removed for the given C{key}.
         """
@@ -547,7 +914,7 @@ class AfterInitObserver:
             return noop()
 
     def changed(
-        self, key: str, old: object, new: object
+        self, key: object, old: object, new: object
     ) -> ContextManager[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
@@ -564,12 +931,28 @@ class AfterInitObserver:
         """
         self._original = None
 
+    def child(self, key: object) -> Changes[Any, Any]:
+        if self._original is not None:
+            return self._original.child(key)
+        else:
+            # TODO: do we need to do something here when _original is set?
+            self._childs.append((key, aoi := AfterInitObserver()))
+            return aoi
 
-CN = TypeVar("CN", bound=Changes[str, object])
+    def _setOriginal(self, newOriginal: Changes[object, object]) -> None:
+        self._original = newOriginal
+        for k, child in self._childs:
+            child._setOriginal(newOriginal.child(k))
+            # TODO: clean up
+
+
+_AfterInitObserver: type[Changes[object, object]] = AfterInitObserver
+
+CN = TypeVar("CN", bound=Changes[Any, Any])
 
 
 def build(
-    observed: Callable[[Changes[str, object]], V],
+    observed: Callable[[Changes[object, object]], V],
     observer: Callable[[V], CN],
     *,
     strong: bool = False,
@@ -583,9 +966,10 @@ def build(
         esoteric use-cases, however, a strong reference may be required, so
         passing C{strong=True} will omit the proxy.
     """
-    interpose = AfterInitObserver()
+    interpose: AfterInitObserver = AfterInitObserver()
     observable: V = observed(interpose)
-    o = interpose._original = observer(
+    o = observer(
         observable if strong else proxy(observable, interpose.finalize)
     )
+    interpose._setOriginal(o)
     return observable, o

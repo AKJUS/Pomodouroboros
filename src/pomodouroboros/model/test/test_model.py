@@ -6,6 +6,8 @@ from unittest.mock import ANY
 from zoneinfo import ZoneInfo
 
 from datetype import aware
+from fritter.drivers.memory import MemoryDriver
+from fritter.scheduler import schedulerFromDriver
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import Clock
 
@@ -24,7 +26,7 @@ from ..intervals import (
 )
 from ..nexus import Nexus
 from ..observables import Changes, IgnoreChanges, SequenceObserver
-from ..sessions import DailySessionRule, Weekday, Session
+from ..sessions import DailySessionRule, Session, Weekday
 
 
 @dataclass
@@ -43,6 +45,20 @@ T = TypeVar("T")
 
 
 @dataclass
+class SessionChange:
+    session: Session
+    startTime: float
+    progress: list[float] = field(default_factory=list)
+    sessionEndTime: float | None = None
+
+    def setEndTime(self, newEndTime: float) -> None:
+        assert (
+            self.sessionEndTime is None
+        ), f"session already ended at {self.sessionEndTime}"
+        self.sessionEndTime = newEndTime
+
+
+@dataclass
 class TestUserInterface:
     """
     Implementation of all UIEventListener protocols.
@@ -52,6 +68,7 @@ class TestUserInterface:
     clock: IReactorTime
     actions: list[TestInterval] = field(default_factory=list)
     actualInterval: TestInterval | None = None
+    sessionChanges: list[SessionChange] = field(default_factory=list)
 
     def describeCurrentState(self, description: str) -> None: ...
 
@@ -63,6 +80,14 @@ class TestUserInterface:
         debug("interval: progress!", percentComplete)
         assert self.actualInterval is not None
         self.actualInterval.currentProgress.append(percentComplete)
+
+    def sessionStarted(self, session: Session) -> None:
+        self.sessionChanges.append(
+            SessionChange(session, self.clock.seconds())
+        )
+
+    def sessionEnded(self) -> None:
+        self.sessionChanges[-1].setEndTime(self.clock.seconds())
 
     def intervalStart(self, interval: AnyIntervalOrIdle) -> None:
         """
@@ -158,7 +183,14 @@ class NexusTests(TestCase):
         self.maxDiff = 9999
         self.clock = Clock()
         self.testUI = TestUserInterface(self.clock)
-        self.nexus = Nexus(self.testUI.setIt, 0)
+        from math import inf
+        self.nexus = Nexus(
+            schedulerFromDriver(driver := MemoryDriver()),
+            driver,
+            self.testUI.setIt,
+            0,
+            Idle(0.0, inf),
+        )
 
     def advanceTime(self, n: float) -> None:
         """

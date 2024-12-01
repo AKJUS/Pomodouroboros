@@ -3,7 +3,15 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Any, Iterator
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Iterator,
+    Protocol,
+    Sequence,
+    TypeVar,
+)
 
 from twisted.trial.unittest import SynchronousTestCase as TC
 
@@ -11,9 +19,9 @@ from ..observables import (
     Changes,
     DebugChanges,
     IgnoreChanges,
-    MirrorDict,
-    MirrorList,
+    MirrorMapping,
     MirrorObject,
+    MirrorSequence,
     MustSpecifyObserver,
     ObservableDict,
     ObservableList,
@@ -22,6 +30,24 @@ from ..observables import (
     build,
     observable,
 )
+
+
+@observable()
+class Containee:
+    attribute: str = "old-value"
+    observer: Observer = IgnoreChanges
+
+
+@dataclass
+class NotObservable:
+    otherAttribute: str = "nevermind"
+
+
+@observable()
+class Container:
+    observer: Observer
+    containee: Containee
+    notObservable: NotObservable
 
 
 class TestObservables(TC):
@@ -66,30 +92,30 @@ class TestObservables(TC):
         del example.valueList[1]
         self.assertEqual(
             [
-                ("will change", "value1", "John", "John", "x"),
-                ("did change", "value1", "x", "John", "x"),
-                ("will change", "value2", 30, 30, 3),
-                ("did change", "value2", 3, 30, 3),
-                ("will add", "list.0", "not found"),
-                ("did add", "list.0", "not found"),
-                ("will add", "list.1", "not found"),
-                ("did add", "list.1", "not found"),
+                ("will change", ("value1",), "John", "John", "x"),
+                ("did change", ("value1",), "x", "John", "x"),
+                ("will change", ("value2",), 30, 30, 3),
+                ("did change", ("value2",), 3, 30, 3),
+                ("will add", ("valueList", 0), "not found"),
+                ("did add", ("valueList", 0), "not found"),
+                ("will add", ("valueList", 1), "not found"),
+                ("did add", ("valueList", 1), "not found"),
                 (
                     "will change",
-                    "list.1",
+                    ("valueList", 1),
                     "not found before",
                     "goodbye",
                     "goodbye!",
                 ),
                 (
                     "did change",
-                    "list.1",
+                    ("valueList", 1),
                     "not found after",
                     "goodbye",
                     "goodbye!",
                 ),
-                ("will remove", "list.1", None, "goodbye!"),
-                ("did remove", "list.1", None, "goodbye!"),
+                ("will remove", ("valueList", 1), "not found", "goodbye!"),
+                ("did remove", ("valueList", 1), "not found", "goodbye!"),
             ],
             cr.changes,
         )
@@ -116,14 +142,16 @@ class TestObservables(TC):
         example.value1 = "new value"
         del example.value1
         example.valueList.append("new list value")
+        example.secretInternalChange()
+        self.maxDiff = 9999
         expectedDebugOutput = "\n".join(
             [
-                "will change 'value1' from 'John' to 'new value'",
-                "did change 'value1' from 'John' to 'new value'",
-                "will remove 'value1' 'new value'",
-                "did remove 'value1' 'new value'",
-                "will add 'list.0' 'new list value'",
-                "did add 'list.0' 'new list value'",
+                "will change ('value1',) from 'John' to 'new value'",
+                "did change ('value1',) from 'John' to 'new value'",
+                "will remove ('value1',) 'new value'",
+                "did remove ('value1',) 'new value'",
+                "will add ('valueList', 0) 'new list value'",
+                "did add ('valueList', 0) 'new list value'",
                 "",
             ]
         )
@@ -131,12 +159,12 @@ class TestObservables(TC):
             ("will add", "value1", "John"),
             ("did add", "value1", "new value"),
             ("will remove", "value1", "new value", "new value"),
-            ("did remove", "value1", None, "new value"),
-            ("will add", "list.0", "not found"),
-            ("did add", "list.0", "not found"),
+            ("did remove", "value1", "not found", "new value"),
+            ("will add", ("valueList", 0), "not found"),
+            ("did add", ("valueList", 0), "not found"),
         ]
-        self.assertEqual(cr.changes, expectedChanges)
-        self.assertEqual(io.getvalue(), expectedDebugOutput)
+        self.assertEqual(expectedChanges, cr.changes)
+        self.assertEqual(expectedDebugOutput, io.getvalue())
 
     def test_mirrorList(self) -> None:
         """
@@ -145,7 +173,7 @@ class TestObservables(TC):
         a: list[str] = []
         b: list[str] = []
 
-        o = ObservableList(MirrorList(b), a)
+        o = ObservableList(MirrorSequence(b), a)
         o.append("1")
         self.assertEqual(a, b)
         o.insert(0, "2")
@@ -157,11 +185,11 @@ class TestObservables(TC):
 
     def test_mirrorDict(self) -> None:
         """
-        A L{MirrorDict} can update from one dictionary to another.
+        A L{MirrorMapping} can update from one dictionary to another.
         """
         a: dict[str, float] = {}
         b: dict[str, float] = {}
-        o = ObservableDict(MirrorDict(b), a)
+        o = ObservableDict(MirrorMapping(b), a)
         o["hello"] = 1
         self.assertEqual(a, b)
         o["goodbye"] = 2
@@ -190,6 +218,24 @@ class TestObservables(TC):
         check()
         a.b = 1
         check()
+
+    def test_subObject(self) -> None:
+        """
+        testing testing
+        """
+        containee = Containee()
+        notObservable = NotObservable()
+        example, changes = build(
+            lambda observer: Container(
+                observer,
+                containee,
+                notObservable,
+            ),
+            lambda mycls: ChangeRecorder(mycls),
+            # strong=True,
+        )
+        containee.attribute = "new-value"
+        self.assertNotEqual(changes.changes, [])
 
     def test_hasDefault(self) -> None:
         self.assertEqual(
@@ -236,6 +282,37 @@ class VerboseColor:
         return (self.name, self.red, self.green, getattr(self, "blue", None))
 
 
+class MaybeStr(Protocol):
+    def __call__(self, nf: str = "not found") -> object: ...
+
+
+def getfunc(
+    key: tuple[object, ...] | str, o: object
+) -> tuple[object, MaybeStr]:
+
+    get: MaybeStr
+    match key:
+        case str(attrkey):
+            rekey: object = attrkey
+
+            def get(nf: str = "not found") -> object:
+                return getattr(o, attrkey, nf)
+
+        case (str(attrkey),):
+            rekey = attrkey
+
+            def get(nf: str = "not found") -> object:
+                return getattr(o, attrkey, nf)
+
+        case _:
+            rekey = key
+
+            def get(nf: str = "not found") -> object:
+                return nf
+
+    return rekey, get
+
+
 @dataclass(repr=False)
 class ChangeRecorder:
     example: object
@@ -245,48 +322,80 @@ class ChangeRecorder:
         return "~"
 
     @contextmanager
-    def added(self, key: str, new: object) -> Iterator[None]:
+    def added(
+        self, key: tuple[object, ...] | str, new: object
+    ) -> Iterator[None]:
         """
         C{value} was added for the given C{key}.
         """
-        self.changes.append(
-            ("will add", key, getattr(self.example, key, "not found"))
-        )
+        rekey, get = getfunc(key, self.example)
+        self.changes.append(("will add", rekey, get()))
         yield
-        self.changes.append(
-            ("did add", key, getattr(self.example, key, "not found"))
-        )
+        self.changes.append(("did add", rekey, get()))
 
     @contextmanager
-    def removed(self, key: str, old: object) -> Iterator[None]:
+    def removed(
+        self, key: tuple[object, ...], old: tuple[Any, ...]
+    ) -> Iterator[None]:
         """
         C{key} was removed for the given C{key}.
         """
-        self.changes.append(
-            ("will remove", key, getattr(self.example, key, None), old)
-        )
+        rekey, get = getfunc(key, self.example)
+        self.changes.append(("will remove", rekey, get(), old))
         yield
-        self.changes.append(
-            ("did remove", key, getattr(self.example, key, None), old)
-        )
+        self.changes.append(("did remove", rekey, get(), old))
 
     @contextmanager
-    def changed(self, key: str, old: object, new: object) -> Iterator[None]:
+    def changed(
+        self, key: tuple[object, ...], old: object, new: object
+    ) -> Iterator[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
         """
-        oldval = getattr(self.example, key, "not found before")
+        rekey, get = getfunc(key, self.example)
+        oldval = get("not found before")
         self.changes.append(("will change", key, oldval, old, new))
         yield
         self.changes.append(
-            (
-                "did change",
-                key,
-                getattr(self.example, key, "not found after"),
-                old,
-                new,
-            )
+            ("did change", key, get("not found after"), old, new)
         )
+
+    def child(self, key: object) -> Changes[Any, Any]:
+        return SubChangeRecorder(self, (key,), self.changes)
+
+
+@dataclass
+class SubChangeRecorder:
+    parent: ChangeRecorder
+    key: tuple[object, ...]
+    changes: list[Any]
+
+    def added(
+        self, key: tuple[object, ...] | str, new: object
+    ) -> ContextManager[None]:
+        """
+        C{value} was added for the given C{key}.
+        """
+        return self.parent.added((*self.key, key), new)
+
+    def removed(
+        self, key: tuple[object, ...], old: tuple[Any, ...]
+    ) -> ContextManager[None]:
+        """
+        C{key} was removed for the given C{key}.
+        """
+        return self.parent.removed((*self.key, key), old)
+
+    def changed(
+        self, key: tuple[object, ...], old: object, new: object
+    ) -> ContextManager[None]:
+        """
+        C{value} was changed from C{old} to C{new} for the given C{key}.
+        """
+        return self.parent.changed((*self.key, key), old, new)
+
+    def child(self, key: tuple[object, ...]) -> Changes[Any, Any]:
+        return SubChangeRecorder(self.parent, (*self.key, key), self.changes)
 
 
 @observable()
@@ -295,13 +404,22 @@ class Example:
     value1: str
     value2: int
     valueList: ObservableList[str]
+    _internalValue: float = 0.0
+
+    def secretInternalChange(self) -> None:
+        """
+        Change an attribute that should not be observable.
+        """
+        self._internalValue += 1
 
     @classmethod
     def new(
-        cls, observer: Changes[str, object], name: str, age: int
+        cls, observer: Changes[tuple[Any, ...], object], name: str, age: int
     ) -> Example:
-        p: PathObserver[object, object] = PathObserver(observer, "")
-        return cls(p, name, age, valueList=ObservableList(p.child("list"), []))
+        # p: PathObserver[object] = PathObserver(observer, (), "")
+        what: Any = observer
+        p: PathObserver[object] = PathObserver(what, (), "")
+        return cls(p, name, age, valueList=ObservableList(IgnoreChanges, []))
 
 
 @observable()
