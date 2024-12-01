@@ -15,7 +15,7 @@ types-python-dateutil
 ulid-py
 quickmacapp ; sys_platform == 'darwin'
 quickmachotkey ; sys_platform == 'darwin'
-encrust
+encrust; sys_platform == 'darwin'
 datetype
 fritter
 setuptools<71.0.0

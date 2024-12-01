@@ -49,7 +49,7 @@ datetype==2024.2.28
     #   fritter
 delocate==0.12.0
     # via encrust
-encrust==2024.9.3
+encrust==2024.9.3 ; sys_platform == "darwin"
     # via -r requirements.in
 fritter==0.0.9
     # via -r requirements.in
