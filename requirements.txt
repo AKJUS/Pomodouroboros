@@ -116,8 +116,9 @@ pycparser==2.22
     # via cffi
 pyhamcrest==2.1.0
     # via twisted
-pyobjc-core==10.3.2
+pyobjc-core==10.3.2 ; sys_platform == "darwin"
     # via
+    #   -r requirements.in
     #   pyobjc-framework-cfnetwork
     #   pyobjc-framework-cocoa
     #   pyobjc-framework-exceptionhandling
