@@ -1,9 +1,51 @@
 [build-system]
 requires = [
-  "setuptools>=42",
+  "setuptools>=42,<71.0.0",
   "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "Pomodouroboros"
+authors=[
+  { name = "Glyph", email = "code@glyph.im" },
+]
+description = "An extremely opinionated pomodoro system."
+readme = "README.md"
+dependencies = [
+  # core dependencies
+  "twisted[tls,http2]",
+  "python-dateutil",
+  "ulid-py",
+  "datetype",
+  "fritter",
+  "setuptools<71.0.0",
+
+  "pip-tools",
+  "mypy",
+  "mypy-zope",
+  "types-python-dateutil",
+
+  "py2app ; sys_platform == 'darwin'",
+  "pyobjc-core ; sys_platform == 'darwin'",
+  "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
+  "pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'",
+  "pyobjc-framework-UserNotifications ; sys_platform == 'darwin'",
+  "pyobjc-framework-CFNetwork ; sys_platform == 'darwin'",
+  "quickmacapp ; sys_platform == 'darwin'",
+  "quickmachotkey ; sys_platform == 'darwin'",
+  "encrust ; sys_platform == 'darwin'",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+version = "0.4.8"
+
+[project.urls]
+Source = "https://github.com/glyph/Pomodouroboros"
+Bug-Tracker = "https://github.com/glyph/Pomodouroboros/issues"
+[project.scripts]
+pom = "pomodouroboros.cli:main"
 
 [tool.black]
 line-length = 79
@@ -17,3 +59,4 @@ line_length = 79
 ignore = [
   "E731",
 ]
+

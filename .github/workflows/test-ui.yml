@@ -32,7 +32,7 @@ jobs:
           mypy src
       - name: Run Mac GUI tests
         run: |
-          CI_MODE=YES python setup.py py2app --alias | cat
+          CI_MODE=YES python py2app_setup.py py2app --alias | cat
           ./dist/CiPomodouroboros.app/Contents/MacOS/CiPomodouroboros
 
   model-tests:
