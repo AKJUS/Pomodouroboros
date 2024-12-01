@@ -1,18 +1,19 @@
 # requirements
-py2app
+py2app ; sys_platform == 'darwin'
 pip-tools
 
-pyobjc-framework-Cocoa
-pyobjc-framework-ExceptionHandling
-pyobjc-framework-UserNotifications
-twisted[tls,macos-platform]
+pyobjc-framework-Cocoa ; sys_platform == 'darwin'
+pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'
+pyobjc-framework-UserNotifications ; sys_platform == 'darwin'
+twisted[tls]
+twisted[macos-platform] ; sys_platform == 'darwin'
 mypy
 mypy-zope
 python-dateutil
 types-python-dateutil
 ulid-py
-quickmacapp
-quickmachotkey
+quickmacapp ; sys_platform == 'darwin'
+quickmachotkey ; sys_platform == 'darwin'
 encrust
 datetype
 fritter
