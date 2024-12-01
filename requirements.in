@@ -5,8 +5,9 @@ pip-tools
 pyobjc-framework-Cocoa ; sys_platform == 'darwin'
 pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'
 pyobjc-framework-UserNotifications ; sys_platform == 'darwin'
-twisted[tls]
-twisted[macos-platform] ; sys_platform == 'darwin'
+pyobjc-framework-CFNetwork ; sys_platform == 'darwin'
+
+twisted[tls,http2]
 mypy
 mypy-zope
 python-dateutil
