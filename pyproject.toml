@@ -35,6 +35,11 @@ dependencies = [
   "quickmacapp ; sys_platform == 'darwin'",
   "quickmachotkey ; sys_platform == 'darwin'",
   "encrust ; sys_platform == 'darwin'",
+
+  "ewmh ; sys_platform == 'linux'",
+  "pycairo ; sys_platform == 'linux'",
+  "PyGObject ; sys_platform == 'linux'",
+  "python-xlib ; sys_platform == 'linux'",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
