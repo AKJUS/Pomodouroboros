@@ -1,6 +1,8 @@
 # installation instructions:
 # sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0
 
+# python-devel python3-gobject-devel cairo-devel cairo-gobject-devel
+
 # deps:
 # ewmh==0.1.6
 # pycairo==1.26.0
