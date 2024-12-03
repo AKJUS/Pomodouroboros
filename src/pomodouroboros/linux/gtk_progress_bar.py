@@ -33,20 +33,20 @@ css = Gtk.CssProvider()
 
 css.load_from_data(
     """
-progressbar text {
+progressbar.overlay text {
   color: yellow;
   font-weight: bold;
 }
-progressbar trough, progress {
+progressbar.overlay trough, progress {
   min-height: 100px;
 }
-progressbar progress {
+progressbar.pomodoro progress {
   background-image: none;
-  background-color: #f00;
+  background-color: #0f0;
 }
-progressbar trough {
+progressbar.pomodoro trough {
  background-image: none;
- background-color: #0f0;
+ background-color: #00f;
 }
 """
 )
@@ -57,16 +57,16 @@ from ewmh import EWMH  # type:ignore
 from cairo import Region  # type:ignore
 
 
-# When the application is launched…
-def on_activate(app: Gtk.Application) -> None:
-    # … create a new window…
+def makeOneProgressBar(display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH) -> None:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
     win.set_decorated(False)
-    win.set_default_size(2000, 100)
-    # … with a button in it…
-    # btn = Gtk.Button(label="Hello, World!")
+    monitor_geom = monitor.get_geometry()
+    win.set_default_size(monitor_geom.width, 100)
+
     prog = Gtk.ProgressBar()
+    prog.add_css_class("pomodoro")
+    prog.add_css_class("overlay")
     frac = 0.7
 
     def refraction() -> bool:
@@ -75,17 +75,9 @@ def on_activate(app: Gtk.Application) -> None:
         frac %= 1.0
         prog.set_fraction(frac)
         return True
-
     to = GLib.timeout_add((1000 // 10), refraction)
-
     prog.set_fraction(0.7)
-
     win.set_child(prog)
-    gdisplay = prog.get_display()
-
-    Gtk.StyleContext.add_provider_for_display(
-        gdisplay, css, Gtk.STYLE_PROVIDER_PRIORITY_USER
-    )
 
     # we can't actually avoid getting focus, but in case the compositors ever
     # fix themselves, let's give it our best try
@@ -101,12 +93,11 @@ def on_activate(app: Gtk.Application) -> None:
     win.get_surface().set_input_region(Region())
     gdk_x11_win = win.get_native().get_surface()
     xid = gdk_x11_win.get_xid()
-    display = XOpenDisplay()
     xlibwin = display.create_resource_object("window", xid)
-    screen = display.screen()
-    ewmh = EWMH(display, screen.root)
+
     # Always on top
-    ewmh.setMoveResizeWindow(xlibwin, x=300, y=800, w=2000, h=150)
+    print(f'moving to {monitor_geom.x} {monitor_geom.y} {monitor_geom.width}')
+    ewmh.setMoveResizeWindow(xlibwin, x=monitor_geom.x, y=monitor_geom.y + (monitor_geom.height - 150), w=monitor_geom.width, h=150)
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_ABOVE")
 
     # Draw even over the task bar (this breaks stuff)
@@ -116,6 +107,20 @@ def on_activate(app: Gtk.Application) -> None:
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_TASKBAR")
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_PAGER")
     display.flush()
+
+# When the application is launched…
+def on_activate(app: Gtk.Application) -> None:
+    # … create a new window…
+    gdisplay = Gdk.Display.get_default()
+    Gtk.StyleContext.add_provider_for_display(
+        gdisplay, css, Gtk.STYLE_PROVIDER_PRIORITY_USER
+    )
+
+    display = XOpenDisplay()
+    screen = display.screen()
+    ewmh = EWMH(display, screen.root)
+    for monitor in gdisplay.get_monitors():
+        makeOneProgressBar(display, monitor, ewmh)
 
 
 if __name__ == "__main__":
