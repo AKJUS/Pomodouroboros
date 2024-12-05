@@ -26,6 +26,15 @@ dependencies = [
   "mypy-zope",
   "types-python-dateutil",
 
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+version = "0.4.8"
+
+[project.optional-dependencies]
+
+gui = [
   "py2app ; sys_platform == 'darwin'",
   "pyobjc-core ; sys_platform == 'darwin'",
   "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
@@ -41,10 +50,6 @@ dependencies = [
   "PyGObject ; sys_platform == 'linux'",
   "python-xlib ; sys_platform == 'linux'",
 ]
-classifiers = [
-    "Programming Language :: Python :: 3",
-]
-version = "0.4.8"
 
 [project.urls]
 Source = "https://github.com/glyph/Pomodouroboros"
