@@ -37,6 +37,17 @@ SavedBreak = TypedDict(
         "intervalType": Literal["Break"],
     },
 )
+SavedTime = TypedDict("SavedTime",{"time": str, "zone": str})
+SavedRule = TypedDict(
+    "SavedRule",
+    {
+        # TODO: these are obviously specifically-formatted strings, i.e. ISO
+        # formats for dailySart / dailyEnd, and weekday enums for days.
+        "dailyStart": SavedTime,
+        "dailyEnd": SavedTime,
+        "days": list[int],
+    },
+)
 SavedEvaluationResult = Literal[
     "distracted", "interrupted", "focused", "achieved"
 ]
@@ -102,5 +113,6 @@ SavedNexus = TypedDict(
         # scalability
         "previousStreaks": list[SavedStreak],
         "sessions": list[SavedSession],
+        "sessionRules": list[SavedRule],
     },
 )

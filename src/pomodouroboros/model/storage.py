@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
-from math import inf
+from datetime import time
 from functools import singledispatch
 from json import dump, load
+from math import inf
 from os import makedirs, replace
 from os.path import basename, dirname, exists, expanduser, join
 from typing import Callable, TypeAlias, cast
+from zoneinfo import ZoneInfo
 
+from datetype import Time, aware
 from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
 
 from pomodouroboros.model.intervals import Idle
+from pomodouroboros.model.schema import SavedRule, SavedTime
+from pomodouroboros.model.sessions import DailySessionRule, Weekday
 
 from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
@@ -114,6 +119,22 @@ def nexusFromJSON(
         loadInterval(interval) for interval in saved["currentStreak"]
     ]
 
+    def loadRule(savedRule: SavedRule) -> DailySessionRule:
+
+        def loadOneTime(savedTime: SavedTime) -> Time[ZoneInfo]:
+            return aware(
+                time.fromisoformat(savedTime["time"]).replace(
+                    tzinfo=ZoneInfo(savedTime["zone"])
+                ),
+                ZoneInfo,
+            )
+
+        return DailySessionRule(
+            dailyStart=loadOneTime(savedRule["dailyStart"]),
+            dailyEnd=loadOneTime(savedRule["dailyEnd"]),
+            days={Weekday(each) for each in savedRule["days"]},
+        )
+
     lastUpdateTime = saved["lastUpdateTime"]
     scheduler: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
         driver := MemoryDriver()
@@ -148,6 +169,7 @@ def nexusFromJSON(
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
         _liveInterval=Idle(0, inf),
+        _sessionRules=[loadRule(rule) for rule in saved["sessionRules"]],
     )
     return nexus
 
@@ -249,6 +271,20 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
                 "automatic": session.automatic,
             }
             for session in nexus._sessions
+        ],
+        "sessionRules": [
+            {
+                "dailyStart": {
+                    "time": rule.dailyStart.isoformat(),
+                    "zone": rule.dailyStart.tzinfo.key,
+                },
+                "dailyEnd": {
+                    "time": rule.dailyEnd.isoformat(),
+                    "zone": rule.dailyEnd.tzinfo.key,
+                },
+                "days": [day.value for day in rule.days],
+            }
+            for rule in nexus._sessionRules
         ],
     }
 

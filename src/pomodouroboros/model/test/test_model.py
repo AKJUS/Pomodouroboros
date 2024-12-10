@@ -25,10 +25,12 @@ from ..intervals import (
     Pomodoro,
     StartPrompt,
 )
-from ..nexus import Nexus
+from ..nexus import Nexus, _noUIFactory
 from ..observables import Changes, IgnoreChanges, SequenceObserver
 from ..sessions import DailySessionRule, Session, Weekday
 from ..storage import nexusFromJSON, nexusToJSON
+
+TZ = ZoneInfo("America/Los_Angeles")
 
 
 @dataclass
@@ -186,6 +188,7 @@ class NexusTests(TestCase):
         self.clock = Clock()
         self.testUI = TestUserInterface(self.clock)
         from math import inf
+
         self.nexus = Nexus(
             schedulerFromDriver(driver := MemoryDriver()),
             driver,
@@ -401,7 +404,6 @@ class NexusTests(TestCase):
         A nexus should start a new session automatically when its rules say
         it's time to do that.
         """
-        TZ = ZoneInfo("America/Los_Angeles")
         dailyStart = aware(
             time(hour=9, minute=30, tzinfo=TZ),
             ZoneInfo,
@@ -762,6 +764,25 @@ class NexusTests(TestCase):
         )
         self.assertEqual(self.nexus._currentStreak, roundTrip._currentStreak)
         self.assertEqual(self.nexus._sessions, roundTrip._sessions)
+
+    def test_saveSessionRules(self) -> None:
+        """
+        Auto-starting session rules are persisted.
+        """
+        dailyStart = aware(time(9, tzinfo=TZ), ZoneInfo)
+        dailyEnd = aware(time(5, tzinfo=TZ), ZoneInfo)
+        # TODO: replace this with L{ActiveSessionManager.rules}
+        self.nexus._sessionRules.append(
+            DailySessionRule(
+                dailyStart=dailyStart,
+                dailyEnd=dailyEnd,
+                days={Weekday.monday},
+            )
+        )
+        self.assertEqual(
+            self.nexus._sessionRules,
+            nexusFromJSON(nexusToJSON(self.nexus), _noUIFactory)._sessionRules,
+        )
 
     def test_achievedEarly(self) -> None:
         """
