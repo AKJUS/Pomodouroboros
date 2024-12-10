@@ -57,7 +57,9 @@ from ewmh import EWMH  # type:ignore
 from cairo import Region  # type:ignore
 
 
-def makeOneProgressBar(display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH) -> None:
+def makeOneProgressBar(
+    display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH
+) -> Gtk.ApplicationWindow:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
     win.set_decorated(False)
@@ -75,6 +77,7 @@ def makeOneProgressBar(display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH) -
         frac %= 1.0
         prog.set_fraction(frac)
         return True
+
     to = GLib.timeout_add((1000 // 10), refraction)
     prog.set_fraction(0.7)
     win.set_child(prog)
@@ -96,8 +99,14 @@ def makeOneProgressBar(display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH) -
     xlibwin = display.create_resource_object("window", xid)
 
     # Always on top
-    print(f'moving to {monitor_geom.x} {monitor_geom.y} {monitor_geom.width}')
-    ewmh.setMoveResizeWindow(xlibwin, x=monitor_geom.x, y=monitor_geom.y + (monitor_geom.height - 150), w=monitor_geom.width, h=150)
+    print(f"moving to {monitor_geom.x} {monitor_geom.y} {monitor_geom.width}")
+    ewmh.setMoveResizeWindow(
+        xlibwin,
+        x=monitor_geom.x,
+        y=monitor_geom.y + (monitor_geom.height - 150),
+        w=monitor_geom.width,
+        h=150,
+    )
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_ABOVE")
 
     # Draw even over the task bar (this breaks stuff)
@@ -107,6 +116,8 @@ def makeOneProgressBar(display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH) -
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_TASKBAR")
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_PAGER")
     display.flush()
+    return win
+
 
 # When the application is launched…
 def on_activate(app: Gtk.Application) -> None:
@@ -119,8 +130,36 @@ def on_activate(app: Gtk.Application) -> None:
     display = XOpenDisplay()
     screen = display.screen()
     ewmh = EWMH(display, screen.root)
-    for monitor in gdisplay.get_monitors():
-        makeOneProgressBar(display, monitor, ewmh)
+    bars: list[Gtk.ApplicationWindow] = []
+
+    def remonitor() -> bool:
+        print("remonitoring")
+        prevbars = bars[:]
+        for monitor in gdisplay.get_monitors():
+            bars.append(makeOneProgressBar(display, monitor, ewmh))
+        for prevbar in prevbars:
+            prevbar.close()
+        return False
+
+    def remonitor_later(
+        display: str,
+        path: str,
+        iface: str,
+        signal: str,
+        args: tuple[object, ...],
+    ) -> None:
+        print("remonitoring...", display)
+        GLib.timeout_add(1000, remonitor)
+
+    from pydbus import SessionBus
+
+    bus = SessionBus()
+    bus.subscribe(
+        iface="org.gnome.Mutter.DisplayConfig",
+        signal="MonitorsChanged",
+        signal_fired=remonitor_later,
+    )
+    remonitor()
 
 
 if __name__ == "__main__":
