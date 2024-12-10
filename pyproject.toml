@@ -49,6 +49,7 @@ gui = [
   "pycairo ; sys_platform == 'linux'",
   "PyGObject ; sys_platform == 'linux'",
   "python-xlib ; sys_platform == 'linux'",
+  "pydbus ; sys_platform == 'linux'",
 ]
 
 [project.urls]

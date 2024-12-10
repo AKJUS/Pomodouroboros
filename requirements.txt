@@ -78,7 +78,7 @@ six==1.17.0
     # via python-dateutil
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-types-python-dateutil==2.9.0.20241003
+types-python-dateutil==2.9.0.20241206
     # via Pomodouroboros (pyproject.toml)
 typing-extensions==4.12.2
     # via

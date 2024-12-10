@@ -70,6 +70,8 @@ pycairo==1.27.0 ; sys_platform == "linux"
     #   pygobject
 pycparser==2.22
     # via cffi
+pydbus==0.6.0 ; sys_platform == "linux"
+    # via Pomodouroboros (pyproject.toml)
 pygobject==3.50.0 ; sys_platform == "linux"
     # via Pomodouroboros (pyproject.toml)
 pyopenssl==24.3.0
@@ -92,7 +94,7 @@ six==1.17.0
     #   python-xlib
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-types-python-dateutil==2.9.0.20241003
+types-python-dateutil==2.9.0.20241206
     # via Pomodouroboros (pyproject.toml)
 typing-extensions==4.12.2
     # via
