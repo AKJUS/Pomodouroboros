@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, time
+from json import dumps, loads
 from typing import Type, TypeVar
 from unittest import TestCase
 from unittest.mock import ANY
@@ -27,6 +28,7 @@ from ..intervals import (
 from ..nexus import Nexus
 from ..observables import Changes, IgnoreChanges, SequenceObserver
 from ..sessions import DailySessionRule, Session, Weekday
+from ..storage import nexusFromJSON, nexusToJSON
 
 
 @dataclass
@@ -740,10 +742,6 @@ class NexusTests(TestCase):
             + (2 * points_for_estimation)
             + (2 * points_for_break),
         )
-
-        from json import dumps, loads
-
-        from ..storage import nexusFromJSON, nexusToJSON
 
         self.nexus.intentions[-1].abandoned = True
         roundTrip = nexusFromJSON(
