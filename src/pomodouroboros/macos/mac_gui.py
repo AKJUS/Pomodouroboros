@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import time
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, TypeVar
 from zoneinfo import ZoneInfo
 
 from AppKit import (
@@ -35,7 +36,7 @@ from ..model.intervals import (
 )
 from ..model.nexus import Nexus
 from ..model.observables import Changes, IgnoreChanges, SequenceObserver
-from ..model.sessions import DailySessionRule, Weekday, Session
+from ..model.sessions import DailySessionRule, Session, Weekday
 from ..model.storage import loadDefaultNexus
 from ..model.util import (
     AMPM,
@@ -303,8 +304,16 @@ class StreakDataSource(NSObject):
         return "uh oh"
 
 
-def showMeSetter(name: str) -> Callable[[AutoStreakRuleValues, object], None]:
+def synthesizeRuleWhenSet(
+    name: str,
+) -> Callable[[AutoStreakRuleValues, object], None]:
+    """
+    Create an L{object_property} setter that re-synthesizes the rule derived
+    from L{AutoStreakRuleValues} and prints it out so we can see what is going
+    on.
+    """
 
+    @interactionRoot
     def aSetter(self: AutoStreakRuleValues, value: object) -> None:
 
         print(f"setting {name} to {value}")
@@ -313,7 +322,19 @@ def showMeSetter(name: str) -> Callable[[AutoStreakRuleValues, object], None]:
         setattr(self, f"_{name}", value)
 
         if self.awoken:
-            print(self.synthesizeRule())
+            """
+            TODO: this is a horrible hack:
+
+                1. we only allow for editing of a single rule, we should either
+                   make the model reflect that or make the UI able to edit
+                   multiple
+
+                2. the rule really ought to be a part of the active session
+                   manager, which is where session logic is moving, but for now
+                   this should at least do something
+            """
+            newRule = self.synthesizeRule()
+            self.nexus._sessionRules[:1] = [newRule]
 
     return aSetter
 
@@ -333,6 +354,9 @@ defaultRule = DailySessionRule(
 
 
 class AutoStreakRuleValues(NSObject):
+
+    # Declare all model-relevant properties first so we can manipulate them
+    # once defined.
     sundaySet: bool = object_property()
     mondaySet: bool = object_property()
     tuesdaySet: bool = object_property()
@@ -349,29 +373,50 @@ class AutoStreakRuleValues(NSObject):
     endMinute: int = object_property()
     endAMPM: AMPM = object_property()
 
-    shouldAutoStart = object_property()
+    shouldAutoStart: bool = object_property()
 
+    # Decorate the model properties defined above with relevant setters.
     _relevantAttributes = []
-
     for aname in dir():
         if aname.startswith("_"):
             continue
         _relevantAttributes.append(aname)
-        locals()[aname].setter(showMeSetter(aname))
+        locals()[aname].setter(synthesizeRuleWhenSet(aname))
     del aname
 
-    awoken = object_property()
+    # Now for other properties that are not relevant to the model.
+    nexus: Nexus = object_property()
+    awoken: bool = object_property()
 
-    def awakeFromNib(self) -> None:
-        super().awakeFromNib()
+    # Methods!
+    def awakeWithNexus_(self, nexus: Nexus) -> None:
+        self.nexus = nexus
+        if self.nexus._sessionRules:
+            self.absorbRule_(self.nexus._sessionRules[0])
         for attribute in self._relevantAttributes:
             if getattr(self, attribute) is None:
                 self.absorbRule_(defaultRule)
         self.awoken = True
 
-    def absorbRule_(self, rule: DailySessionRule) -> None:
+    @contextmanager
+    def sleepy(self) -> Iterator[None]:
+        """
+        Go to 'sleep'; i.e. stop pushing updates from UI elements back into the
+        model, since we are updating the UI to reflect what the model just told
+        us.
+        """
+        awoken, self.awoken = self.awoken, False
         try:
-            awoken, self.awoken = self.awoken, False
+            yield
+        finally:
+            self.awoken = awoken
+
+    def absorbRule_(self, rule: DailySessionRule) -> None:
+        """
+        The rule in the model has changed.  Set all of my attributes (bound to
+        views in the UI) to reflect the rules here.
+        """
+        with self.sleepy():
             for enumerated in Weekday:
                 setattr(self, enumerated.name + "Set", enumerated in rule.days)
             startHour, startAMPM = addampm(rule.dailyStart.hour)
@@ -386,8 +431,6 @@ class AutoStreakRuleValues(NSObject):
                 rule.dailyEnd.minute,
                 endAMPM,
             )
-        finally:
-            self.awoken = awoken
 
     def synthesizeRule(self) -> DailySessionRule:
         days = set()
@@ -539,6 +582,7 @@ class PomFilesOwner(NSObject):
             self.intentionDataSource.awakeWithNexus_(self.nexus)
             self.streakDataSource.awakeWithNexus_(self.nexus)
             self.sessionDataSource.awakeWithNexus_(self.nexus)
+            self.autoStreakRuleValues.awakeWithNexus_(self.nexus)
             if (
                 self.intentionDataSource.numberOfRowsInTableView_(
                     self.intentionsTable
