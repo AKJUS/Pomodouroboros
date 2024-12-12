@@ -10,12 +10,8 @@ attrs==24.2.0
     #   twisted
 automat==24.8.1
     # via twisted
-build==1.2.2.post1
-    # via pip-tools
 cffi==1.17.1
     # via cryptography
-click==8.1.7
-    # via pip-tools
 constantly==23.10.4
     # via twisted
 cryptography==44.0.0
@@ -42,18 +38,6 @@ idna==3.10
     #   twisted
 incremental==24.7.2
     # via twisted
-mypy==1.13.0
-    # via
-    #   Pomodouroboros (pyproject.toml)
-    #   mypy-zope
-mypy-extensions==1.0.0
-    # via mypy
-mypy-zope==1.0.9
-    # via Pomodouroboros (pyproject.toml)
-packaging==24.2
-    # via build
-pip-tools==7.4.1
-    # via Pomodouroboros (pyproject.toml)
 priority==1.3.0
     # via twisted
 pyasn1==0.6.1
@@ -66,10 +50,6 @@ pycparser==2.22
     # via cffi
 pyopenssl==24.3.0
     # via twisted
-pyproject-hooks==1.2.0
-    # via
-    #   build
-    #   pip-tools
 python-dateutil==2.9.0.post0
     # via Pomodouroboros (pyproject.toml)
 service-identity==24.2.0
@@ -78,36 +58,18 @@ six==1.17.0
     # via python-dateutil
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-types-python-dateutil==2.9.0.20241206
-    # via Pomodouroboros (pyproject.toml)
 typing-extensions==4.12.2
-    # via
-    #   mypy
-    #   twisted
+    # via twisted
 tzdata==2024.2
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
-wheel==0.45.1
-    # via pip-tools
-zope-event==5.0
-    # via zope-schema
 zope-interface==7.2
-    # via
-    #   mypy-zope
-    #   twisted
-    #   zope-schema
-zope-schema==7.0.1
-    # via mypy-zope
+    # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==24.3.1
-    # via pip-tools
 setuptools==70.3.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   incremental
-    #   pip-tools
-    #   zope-event
     #   zope-interface
-    #   zope-schema

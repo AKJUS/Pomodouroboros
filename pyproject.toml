@@ -20,12 +20,6 @@ dependencies = [
   "datetype",
   "fritter",
   "setuptools<71.0.0",
-
-  "pip-tools",
-  "mypy",
-  "mypy-zope",
-  "types-python-dateutil",
-
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -43,13 +37,22 @@ gui = [
   "pyobjc-framework-CFNetwork ; sys_platform == 'darwin'",
   "quickmacapp ; sys_platform == 'darwin'",
   "quickmachotkey ; sys_platform == 'darwin'",
-  "encrust ; sys_platform == 'darwin'",
 
   "ewmh ; sys_platform == 'linux'",
   "pycairo ; sys_platform == 'linux'",
   "PyGObject ; sys_platform == 'linux'",
   "python-xlib ; sys_platform == 'linux'",
   "pydbus ; sys_platform == 'linux'",
+]
+
+dev = [
+  "pip-tools",
+  "mypy",
+  "mypy-zope",
+  "types-python-dateutil",
+  "pygobject-stubs",
+  "types-python-xlib",
+  "encrust ; sys_platform == 'darwin'",
 ]
 
 [project.urls]

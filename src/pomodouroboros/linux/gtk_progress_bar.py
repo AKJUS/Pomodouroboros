@@ -10,18 +10,18 @@
 # python-xlib==0.33
 # six==1.16.0
 
-# Load Gtk
-import gi  # type:ignore
+from typing import Any
 
-gi.require_version("GLib", "2.0")
-from gi.repository import GLib  # type:ignore
-
-gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk
-
-Gdk.set_allowed_backends("x11")
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
+from .platspec import (
+    EWMH,
+    Gdk,
+    GdkX11,
+    GLib,
+    Gtk,
+    RectangleInt,
+    Region,
+    XOpenDisplay,
+)
 
 css = Gtk.CssProvider()
 
@@ -51,14 +51,9 @@ progressbar.pomodoro trough {
 """
 )
 
-from Xlib.display import Display as XOpenDisplay  # type:ignore
-from ewmh import EWMH  # type:ignore
-
-from cairo import Region  # type:ignore
-
 
 def makeOneProgressBar(
-    display: Gdk.Display, monitor: Gdk.Monitor, ewmh: EWMH
+    display: XOpenDisplay, monitor: Gdk.Monitor, ewmh: EWMH
 ) -> Gtk.ApplicationWindow:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
@@ -92,9 +87,11 @@ def makeOneProgressBar(
     win.set_receives_default(False)
 
     win.present()
-
-    win.get_surface().set_input_region(Region())
-    gdk_x11_win = win.get_native().get_surface()
+    gdk_x11_win = win.get_surface()
+    assert isinstance(
+        gdk_x11_win, GdkX11.X11Surface
+    ), "only the x11 backend supports this"
+    gdk_x11_win.set_input_region(Region(rectangle=RectangleInt(0, 0, 0, 0)))
     xid = gdk_x11_win.get_xid()
     xlibwin = display.create_resource_object("window", xid)
 
@@ -123,6 +120,7 @@ def makeOneProgressBar(
 def on_activate(app: Gtk.Application) -> None:
     # … create a new window…
     gdisplay = Gdk.Display.get_default()
+    assert gdisplay is not None, "cannot run without a display"
     Gtk.StyleContext.add_provider_for_display(
         gdisplay, css, Gtk.STYLE_PROVIDER_PRIORITY_USER
     )
