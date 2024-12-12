@@ -1,15 +1,5 @@
-import gi  # type:ignore
 
-gi.require_version("GLib", "2.0")
-from gi.repository import GLib  # type:ignore
-from gi.repository import Gio, GObject
-
-gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk
-
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk
-
+from .platspec import GObject, Gtk, Gio
 
 class MyThing(GObject.Object):
     def __init__(self, aValue: int) -> None:
@@ -37,11 +27,15 @@ def on_activate(app: Gtk.Application) -> None:
     def onsetup(
         factory: Gtk.SignalListItemFactory, item: Gtk.ListItem
     ) -> None:
-        value = item.get_item().aValue
+        model = item.get_item()
+        assert isinstance(model, MyThing)
+        value = model.aValue
         item.set_child(Gtk.Label.new(f"setup {value}"))
 
     def onbind(factory: Gtk.SignalListItemFactory, item: Gtk.ListItem) -> None:
-        value = item.get_item().aValue
+        model = item.get_item()
+        assert isinstance(model, MyThing)
+        value = model.aValue
         item.set_child(Gtk.Label.new(f"bind {value}"))
 
     signalFactory.connect("setup", onsetup)
@@ -62,5 +56,6 @@ if __name__ == "__main__":
 
     # Run the application
     print("running?")
-    app.run()
+    from sys import argv
+    app.run(argv)
     print("goodbye?")
