@@ -700,6 +700,7 @@ def poms2Dicts(
                 }[pomOrBreak.intention.wasSuccessful]
             ),
             "pom": pomOrBreak,
+            "canChange": canChange,
         }
 
 
@@ -791,6 +792,8 @@ class DayEditorController(NSObject):
                     pomAsDict
                 )
                 self.arrayController.addObject_(rowDict)
+                # The UI will push changes into the 'description' field, and we
+                # will observe them here.
                 rowDict.addObserver_forKeyPath_options_context_(
                     observer, "description", AllOptions, None
                 )
