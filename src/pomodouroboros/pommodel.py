@@ -542,12 +542,17 @@ class Day(object):
             allPending.pop(0)
         return allPending
 
-    def bonusPomodoro(self, currentTime: datetime) -> Pomodoro:
+    def bonusPomodoro(self, currentTime: datetime) -> None:
         """
         Create a new pomodoro that doesn't overlap with existing ones.
         """
 
         def lengths() -> tuple[slice, datetime, timedelta, timedelta]:
+            """
+            Look for the place to insert the new pomodoro, expressed as the
+            position to insert it in the pending intervals list (a 0-width
+            slice) and the start time, pomodoro length, and break length.
+            """
             allIntervals = self.elapsedIntervals + self.pendingIntervals
             position = slice(len(self.pendingIntervals), 0)
             if allIntervals:
@@ -565,22 +570,6 @@ class Day(object):
                 pomodoroLength = firstPom.endTime - firstPom.startTime
                 breakLength = firstBreak.endTime - firstBreak.startTime
                 startingPoint = currentTime
-
-                for idx, anInterval in enumerate(allIntervals):
-                    position = slice(idx, 0)
-                    if anInterval.startTime > startingPoint:
-                        potentialEnd = (
-                            startingPoint + pomodoroLength + breakLength
-                        )
-                        if (
-                            not anInterval.startTime
-                            < potentialEnd
-                            < anInterval.endTime
-                        ):
-                            break
-                    startingPoint = anInterval.endTime
-                else:
-                    position = slice(len(self.pendingIntervals), 0)
             else:
                 # Variables (we need to save these attributes in the
                 # constructor so we don't need to synthesize defaults here.)
@@ -588,10 +577,29 @@ class Day(object):
                 breakLength = timedelta(minutes=5)
                 startingPoint = self.endTime
 
+
+            for idx, anInterval in enumerate(self.pendingIntervals):
+                position = slice(idx, 0)
+                if anInterval.startTime > startingPoint:
+                    potentialEnd = (
+                        startingPoint + pomodoroLength + breakLength
+                    )
+                    if (
+                        not anInterval.startTime
+                        < potentialEnd
+                        < anInterval.endTime
+                    ):
+                        break
+                startingPoint = anInterval.endTime
+            else:
+                position = slice(len(self.pendingIntervals), 0)
+
             return position, startingPoint, pomodoroLength, breakLength
 
         position, startingPoint, pomodoroLength, breakLength = lengths()
         newStartTime = max(startingPoint, currentTime)
+        if (newStartTime + pomodoroLength).date() != self.startTime.date():
+            return None
         newPomodoro = Pomodoro(
             None, newStartTime, newStartTime + pomodoroLength
         )
@@ -599,7 +607,6 @@ class Day(object):
             newPomodoro.endTime, newPomodoro.endTime + breakLength
         )
         self.pendingIntervals[position] = [newPomodoro, newBreak]
-        return newPomodoro
 
     def advanceToTime(
         self, currentTimestamp: float, observer: PomObserver
