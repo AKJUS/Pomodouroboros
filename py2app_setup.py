@@ -18,8 +18,7 @@ def check_mode() -> str:
         case {"TEST_MODE": b}:
             if b:
                 return "Test"
-        case _:
-            return ""
+    return ""
 
 MODE = check_mode()
 
