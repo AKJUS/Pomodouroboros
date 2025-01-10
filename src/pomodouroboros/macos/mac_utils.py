@@ -256,16 +256,15 @@ class SometimesBackground:
         """
         Sometimes, fullscreen application stop getting the HUD overlay.
         """
-        if (
-            NSRunningApplication.currentApplication()
-            == NSWorkspace.sharedWorkspace().menuBarOwningApplication()
-        ):
-            NSLog("my space activated, not doing anything")
-            return
-        NSLog("space activated, closing window")
-        self.mainWindow.close()
+        menuBarOwner = NSWorkspace.sharedWorkspace().menuBarOwningApplication()
+        me = NSRunningApplication.currentApplication()
+        NSLog("space activated where allegedly %@ owns the menu bar", menuBarOwner)
+        if not self.mainWindow.isOnActiveSpace():
+            NSLog("I am not on the active space, closing the window")
+            self.mainWindow.close()
+        else:
+            NSLog("I am on the active space; not closing.")
         self.onSpaceChange()
-        NSLog("window closed")
 
     def someWindowWillClose_(self, notification: NSNotification) -> None:
         """
