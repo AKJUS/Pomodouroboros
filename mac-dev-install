@@ -1,0 +1,13 @@
+#!/bin/bash -ex
+
+if [ -z "${VIRTUAL_ENV}" ]; then
+    echo "Please make and activate a venv with your preferred tool, such as 'python -m venv ~/pom-venv; . ~/pom-venv/bin/activate' first."
+    exit 1;
+fi;
+
+pip install \
+    --upgrade \
+    --requirement ./requirements.txt \
+    --requirement ./dev-requirements.txt \
+    --requirement ./macOS-gui.requirements.txt \
+    --editable .
