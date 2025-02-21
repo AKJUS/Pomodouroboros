@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict, Union
+from typing import Literal, NotRequired, TypedDict, Union
 
 SavedIntervalType = Literal["Pomodoro", "GracePeriod", "Break", "StartPrompt", "Idle"]
 SavedEstimate = TypedDict(
@@ -113,6 +113,6 @@ SavedNexus = TypedDict(
         # scalability
         "previousStreaks": list[SavedStreak],
         "sessions": list[SavedSession],
-        "sessionRules": list[SavedRule],
+        "sessionRules": NotRequired[list[SavedRule]],
     },
 )

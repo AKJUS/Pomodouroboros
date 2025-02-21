@@ -169,7 +169,9 @@ def nexusFromJSON(
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
         _liveInterval=Idle(0, inf),
-        _sessionRules=[loadRule(rule) for rule in saved["sessionRules"]],
+        _sessionRules=[
+            loadRule(rule) for rule in saved.get("sessionRules", [])
+        ],
     )
     return nexus
 
