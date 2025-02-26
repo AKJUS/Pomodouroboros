@@ -42,6 +42,10 @@ OPTIONS = {
     },
     "iconfile": f"{MODE}icon.icns",
     "app": APP,
+    "dylib_excludes": [
+        "/Library/Frameworks/Python.framework/Versions/3.13/Frameworks/Tcl.framework",
+        "/Library/Frameworks/Python.framework/Versions/3.13/Frameworks/Tk.framework",
+    ],
 }
 
 setup(
