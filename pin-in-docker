@@ -1,0 +1,8 @@
+#!/bin/bash
+
+docker build -t pomodouroboros-dep-pinner -f linux-dep-pinner.dockerfile . &&
+    docker run -v "$(pwd):/code" --rm -it pomodouroboros-dep-pinner /bin/bash -x -c '
+cd /code;
+. /venv/bin/activate;
+/bin/bash -x ./pindeps;
+'
