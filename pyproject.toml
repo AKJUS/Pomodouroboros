@@ -1,5 +1,6 @@
 [build-system]
 requires = [
+  # <71 constraint is due to https://github.com/ronaldoussoren/py2app/issues/531
   "setuptools>=42,<71.0.0",
   "wheel",
 ]
@@ -19,6 +20,8 @@ dependencies = [
   "ulid-py",
   "datetype",
   "fritter",
+  # <71 constraint is due to
+  # https://github.com/ronaldoussoren/py2app/issues/531
   "setuptools<71.0.0",
 ]
 classifiers = [
