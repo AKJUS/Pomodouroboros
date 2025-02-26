@@ -6,6 +6,10 @@ Usage:
 """
 
 import py2app
+
+from py2app import util
+util.codesign_adhoc = lambda bundle: None
+
 import os
 
 from setuptools import setup
