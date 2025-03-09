@@ -26,7 +26,9 @@ def check_mode() -> str:
 
 MODE = check_mode()
 
-APP = [f"mac/{MODE}Pomodouroboros.py"]
+APP = [
+    f"mac/{MODE}Pomodouroboros.pyw",
+]
 DATA_FILES = [
     "IBFiles/GoalListWindow.xib",
     "IBFiles/IntentionEditor.xib",
