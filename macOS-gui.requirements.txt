@@ -59,7 +59,7 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.129.3
+hypothesis==6.129.4
     # via twisted
 idna==3.10
     # via
@@ -150,7 +150,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==76.0.0
+setuptools==76.1.0
     # via
     #   incremental
     #   modulegraph
