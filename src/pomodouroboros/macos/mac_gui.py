@@ -18,7 +18,7 @@ from datetype import aware
 from Foundation import NSIndexSet, NSObject
 from fritter.drivers.datetimes import guessLocalZone
 from objc import IBAction, IBOutlet, object_property, super
-from quickmacapp import Status, answer, mainpoint
+from quickmacapp import Status, answer, mainpoint, dockIconWhenVisible
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import LoopingCall
@@ -49,7 +49,6 @@ from ..model.util import (
 from ..storage import TEST_MODE
 from .hudmulti import debugMultiHud
 from .intentions_gui import IntentionDataSource
-from .mac_utils import SometimesBackground
 from .multiple_choice import multipleChoiceButtons
 from .old_mac_gui import main as oldMain
 from .progress_hud import ProgressController
@@ -196,9 +195,7 @@ class MacUserInterface:
         )
         nibInstance.instantiateWithOwner_topLevelObjects_(owner, None)
         pc = ProgressController()
-        SometimesBackground(
-            owner.intentionsWindow, pc.redisplay
-        ).startObserving()
+        dockIconWhenVisible(owner.intentionsWindow, onSpaceChange=pc.redisplay)
 
         def openWindow() -> None:
             owner.intentionsWindow.makeKeyAndOrderFront_(owner)

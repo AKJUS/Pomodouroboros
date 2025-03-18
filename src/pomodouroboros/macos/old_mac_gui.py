@@ -50,7 +50,7 @@ from Foundation import (
 )
 from objc import IBAction, IBOutlet, super
 from PyObjCTools.AppHelper import callLater
-from quickmacapp import Status, ask, choose, quit
+from quickmacapp import Status, ask, choose, quit, dockIconWhenVisible
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.python.failure import Failure
@@ -66,7 +66,7 @@ from ..pommodel import (
 )
 from ..storage import TEST_MODE, DayLoader
 from .mac_dates import datetimeFromNSDate, localDate
-from .mac_utils import SometimesBackground, callOnNotification
+from .mac_utils import callOnNotification
 from .notifs import (
     askForIntent,
     notify,
@@ -851,7 +851,7 @@ def main(reactor: IReactorTime) -> None:
     def onSpaceChange() -> None:
         dayManager.progressController.redisplay()
 
-    SometimesBackground(ctrl.editorWindow, onSpaceChange).startObserving()
+    dockIconWhenVisible(ctrl.editorWindow, onSpaceChange=onSpaceChange)
     callOnNotification(
         NSApplicationDidChangeScreenParametersNotification,
         onSpaceChange,
