@@ -5,52 +5,8 @@ Usage:
     python py2app_setup.py py2app
 """
 
-import py2app
-
-from py2app import util
-util.codesign_adhoc = lambda bundle: None
-
 import os
-
 from setuptools import setup
+from encrust_setup import description
 
-def check_mode() -> str:
-    match os.environ:
-        case {"CI_MODE": b}:
-            if b:
-                return "Ci"
-        case {"TEST_MODE": b}:
-            if b:
-                return "Test"
-    return ""
-
-MODE = check_mode()
-
-APP = [
-    f"mac/{MODE}Pomodouroboros.pyw",
-]
-DATA_FILES = [
-    "IBFiles/GoalListWindow.xib",
-    "IBFiles/IntentionEditor.xib",
-    "IBFiles/MainMenu.xib",
-    "IBFiles/ProgressHUD.xib",
-]
-OPTIONS = {
-    "plist": {
-        "LSUIElement": True,
-        "NSRequiresAquaSystemAppearance": False,
-        "CFBundleIdentifier": f"im.glyph.and.this.is.{MODE}pomodouroboros",
-        "CFBundleName": f"{MODE}Pomodouroboros",
-    },
-    "iconfile": f"{MODE}icon.icns",
-    "app": APP,
-    "dylib_excludes": [
-        "/Library/Frameworks/Python.framework/Versions/3.13/Frameworks/Tcl.framework",
-        "/Library/Frameworks/Python.framework/Versions/3.13/Frameworks/Tk.framework",
-    ],
-}
-
-setup(
-    data_files=DATA_FILES,
-    options={"py2app": OPTIONS},
-)
+setup(**description.setupOptions())
