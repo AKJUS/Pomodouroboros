@@ -491,7 +491,7 @@ class DayManager(object):
                     lambda: self.progressController.redisplay(),
                 ),
                 (
-                    "Check for Upd…",
+                    "Check for Updates…",
                     lambda: self.editController.updaterController.checkForUpdates_(
                         NSApp()
                     ),
