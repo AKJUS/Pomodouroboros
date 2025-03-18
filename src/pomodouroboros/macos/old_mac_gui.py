@@ -490,6 +490,12 @@ class DayManager(object):
                     "Reposition Window",
                     lambda: self.progressController.redisplay(),
                 ),
+                (
+                    "Check for Upd…",
+                    lambda: self.editController.updaterController.checkForUpdates_(
+                        NSApp()
+                    ),
+                ),
                 ("Quit", quit),
             ]
         )
@@ -719,6 +725,9 @@ class DayEditorController(NSObject):
 
     dayLabelField: Optional[NSTextFieldCell]
     dayLabelField = IBOutlet()
+
+    updaterController: NSObject
+    updaterController = IBOutlet()
 
     observer = None
     clock: IReactorTime

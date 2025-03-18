@@ -10,6 +10,7 @@
 		F08257CF2825F2C80007B95F /* GoalListWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = GoalListWindow.xib; sourceTree = "<group>"; };
 		F0A554F4298499190086B05F /* IntentionEditor.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = IntentionEditor.xib; sourceTree = "<group>"; };
 		F0A554F52984A5580086B05F /* MainMenu.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainMenu.xib; sourceTree = "<group>"; };
+		F0EABDFE2D89596F00BA14C8 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = "/Users/glyph/.local/firstparty/sparkle-project.org/Sparkle-2.7.0/Sparkle.framework"; sourceTree = "<absolute>"; };
 		F0EB9F572A4E3475007E2B3E /* macos */ = {isa = PBXFileReference; lastKnownFileType = folder; name = macos; path = ../src/pomodouroboros/macos; sourceTree = "<group>"; };
 		F0FA5F952BF43F1900F76976 /* ProgressHUD.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ProgressHUD.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -18,6 +19,7 @@
 		F08257C82825F2960007B95F = {
 			isa = PBXGroup;
 			children = (
+				F0EABDFE2D89596F00BA14C8 /* Sparkle.framework */,
 				F08257CF2825F2C80007B95F /* GoalListWindow.xib */,
 				F0A554F52984A5580086B05F /* MainMenu.xib */,
 				F0A554F4298499190086B05F /* IntentionEditor.xib */,
@@ -33,7 +35,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastUpgradeCheck = 1420;
+				LastUpgradeCheck = 1620;
 			};
 			buildConfigurationList = F08257CC2825F2960007B95F /* Build configuration list for PBXProject "IBFiles" */;
 			compatibilityVersion = "Xcode 13.0";
@@ -76,6 +78,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -110,6 +113,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
