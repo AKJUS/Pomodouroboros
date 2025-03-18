@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM python:3.13
 
 ENV DEBIAN_FRONTEND=noninteractive;
 RUN apt -qyy update;
