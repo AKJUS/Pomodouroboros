@@ -12,6 +12,7 @@
                 <outlet property="dayLabelField" destination="5Vb-B2-HLs" id="Fgp-E9-lRf"/>
                 <outlet property="editorWindow" destination="QvC-M9-y7g" id="b7d-BX-RzA"/>
                 <outlet property="tableView" destination="A2B-RE-w6m" id="iG2-0M-vx9"/>
+                <outlet property="updaterController" destination="byH-aD-kqf" id="Tyc-zP-EQG"/>
             </connections>
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
