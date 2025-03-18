@@ -12,7 +12,7 @@
                 <outlet property="dayLabelField" destination="5Vb-B2-HLs" id="Fgp-E9-lRf"/>
                 <outlet property="editorWindow" destination="QvC-M9-y7g" id="b7d-BX-RzA"/>
                 <outlet property="tableView" destination="A2B-RE-w6m" id="iG2-0M-vx9"/>
-                <outlet property="updaterController" destination="byH-aD-kqf" id="Tyc-zP-EQG"/>
+                <outlet property="updaterController" destination="hm3-Ta-oeO" id="hiX-wH-M9h"/>
             </connections>
         </customObject>
         <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
@@ -296,10 +296,6 @@
             <point key="canvasLocation" x="356" y="151"/>
         </window>
         <arrayController id="XNf-x2-cC2"/>
-        <customObject id="byH-aD-kqf" customClass="SPUStandardUpdaterController">
-            <connections>
-                <outlet property="updaterDelegate" destination="-2" id="iSv-3l-wgJ"/>
-            </connections>
-        </customObject>
+        <customObject id="hm3-Ta-oeO" customClass="SPUStandardUpdaterController"/>
     </objects>
 </document>

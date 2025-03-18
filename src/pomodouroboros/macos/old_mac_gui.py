@@ -826,22 +826,23 @@ def main(reactor: IReactorTime) -> None:
         reactor, dayLoader
     )
 
-    # from objc import pathForFramework, loadBundle
-    # from AppKit import NSBundle
+    from objc import pathForFramework, loadBundle
+    from AppKit import NSBundle
 
-    # b = NSBundle.mainBundle()
-    # sparklePath = pathForFramework(
-    #     os.path.join(b.privateFrameworksPath(), "Sparkle.framework")
-    # )
+    b = NSBundle.mainBundle()
+    sparklePath = pathForFramework(
+        os.path.join(b.privateFrameworksPath(), "Sparkle.framework")
+    )
 
-    # sparkleNS: dict[str, object] = {}
-    # loadBundle("Sparkle", sparkleNS, bundle_path=sparklePath)
+    sparkleNS: dict[str, object] = {}
+    loadBundle("Sparkle", sparkleNS, bundle_path=sparklePath)
 
     loaded, topLevelObjects = (
         NSNib.alloc()
         .initWithNibNamed_bundle_("GoalListWindow.nib", None)
         .instantiateWithOwner_topLevelObjects_(ctrl, None)
     )
+
     setupNotifications()
     withdrawIntentPrompt()
     dayManager = DayManager.new(reactor, ctrl, dayLoader)
