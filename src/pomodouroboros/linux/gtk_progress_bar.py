@@ -133,6 +133,9 @@ def on_activate(app: Gtk.Application) -> None:
     def remonitor() -> bool:
         print("remonitoring")
         prevbars = bars[:]
+        # pygobject-stubs seems to have a bug where gdisplay.get_monitors()
+        # yields Objects rather than Monitors
+        monitor: Any
         for monitor in gdisplay.get_monitors():
             bars.append(makeOneProgressBar(display, monitor, ewmh))
         for prevbar in prevbars:
