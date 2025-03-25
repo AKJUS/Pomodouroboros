@@ -167,6 +167,14 @@ class MacPomObserver(object):
                 NSLog("refreshing after expressing intention")
                 self.refreshList()
 
+            # TODO: the structure of this API is incorrect, because we are only
+            # populating the response callback to use to process the intention
+            # being set at the time that the notification is emitted in a
+            # running application.  Thus, if the application emits a "set
+            # intention" prompt, and is then quit, the user entering a new
+            # intention will re-launch our application, but when the
+            # notification center delegate is invoked to respond to that
+            # action, it will have no response handler available.
             askForIntent(doExpressIntention)
         else:
             notify("Pomodoro Starting", startingPomodoro.intention.description)
