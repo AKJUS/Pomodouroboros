@@ -44,7 +44,7 @@ pyasn1==0.6.1
     # via
     #   pyasn1-modules
     #   service-identity
-pyasn1-modules==0.4.1
+pyasn1-modules==0.4.2
     # via service-identity
 pycparser==2.22
     # via cffi
@@ -58,9 +58,9 @@ six==1.17.0
     # via python-dateutil
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.12.2
+typing-extensions==4.13.1
     # via twisted
-tzdata==2025.1
+tzdata==2025.2
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
@@ -68,7 +68,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==76.1.0
+setuptools==78.1.0
     # via
     #   incremental
     #   zope-interface
