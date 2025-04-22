@@ -79,19 +79,29 @@ def makeOneProgressBar(
 
     # we can't actually avoid getting focus, but in case the compositors ever
     # fix themselves, let's give it our best try
+
+    win.realize()
     win.set_can_focus(False)
     win.set_focusable(False)
     win.set_focus_on_click(False)
     win.set_can_target(False)
     win.set_auto_startup_notification(False)
     win.set_receives_default(False)
-
-    win.present()
+    win.realize()
     gdk_x11_win = win.get_surface()
     assert isinstance(
         gdk_x11_win, GdkX11.X11Surface
     ), "only the x11 backend supports this"
     gdk_x11_win.set_input_region(Region(rectangle=RectangleInt(0, 0, 0, 0)))
+
+    # cribbed from the (deprecated, removed) implementation of
+    # gdk_x11_window_set_focus_on_map ( see
+    # https://github.com/GNOME/gtk/blob/v3.22.20/gdk/x11/gdkwindow-x11.c#L3513
+    # ) this prevents the window from stealing focus from the focused wayland
+    # application
+    gdk_x11_win.set_user_time(0)
+
+    win.set_visible(True)
     xid = gdk_x11_win.get_xid()
     xlibwin = display.create_resource_object("window", xid)
 
