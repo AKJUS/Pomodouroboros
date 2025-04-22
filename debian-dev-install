@@ -1,0 +1,18 @@
+#!/bin/bash -ex
+
+# Development dependency installation steps for Debian and Debian-derived
+# distributions such as Ubuntu.
+
+if [ -z "${VIRTUAL_ENV}" ]; then
+    echo "Please make and activate a venv with your preferred tool, such as 'python -m venv ~/pom-venv; . ~/pom-venv/bin/activate' first."
+    exit 1;
+fi;
+
+sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0;
+
+pip install \
+    --upgrade \
+    --requirement ./requirements.txt \
+    --requirement ./dev-requirements.txt \
+    --requirement ./Linux-gui.requirements.txt \
+    --editable .
