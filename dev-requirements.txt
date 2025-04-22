@@ -13,7 +13,7 @@ attrs==25.3.0
     # via
     #   service-identity
     #   twisted
-automat==24.8.1
+automat==25.4.16
     # via twisted
 build==1.2.2.post1
     # via pip-tools
@@ -63,11 +63,11 @@ mypy==1.15.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   mypy-zope
-mypy-extensions==1.0.0
+mypy-extensions==1.1.0
     # via mypy
 mypy-zope==1.0.11
     # via Pomodouroboros (pyproject.toml)
-packaging==24.2
+packaging==25.0
     # via
     #   build
     #   delocate
@@ -108,7 +108,7 @@ types-python-dateutil==2.9.0.20241206
     # via Pomodouroboros (pyproject.toml)
 types-python-xlib==0.33.0.20240407
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.13.1
+typing-extensions==4.13.2
     # via
     #   delocate
     #   mypy
@@ -134,7 +134,7 @@ zope-schema==7.0.1
 # The following packages are considered to be unsafe in a requirements file:
 pip==25.0.1
     # via pip-tools
-setuptools==78.1.0
+setuptools==79.0.0
     # via
     #   incremental
     #   modulegraph

@@ -8,7 +8,7 @@ attrs==25.3.0
     # via
     #   service-identity
     #   twisted
-automat==24.8.1
+automat==25.4.16
     # via twisted
 cffi==1.17.1
     # via cryptography
@@ -58,7 +58,7 @@ six==1.17.0
     # via python-dateutil
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.13.1
+typing-extensions==4.13.2
     # via twisted
 tzdata==2025.2
     # via fritter
@@ -68,7 +68,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==78.1.0
+setuptools==79.0.0
     # via
     #   incremental
     #   zope-interface

@@ -2,7 +2,6 @@
 
 mypy ./src;
 rm -fr ./build ./dist;
-# https://github.com/ronaldoussoren/py2app/issues/444
-python py2app_setup.py py2app --alias | cat;
+encrust build;
 rm -fr ./build;
 exec ./dist/Pomodouroboros.app/Contents/MacOS/Pomodouroboros;
