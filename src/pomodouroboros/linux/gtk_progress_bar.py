@@ -106,14 +106,14 @@ def makeOneProgressBar(
     xlibwin = display.create_resource_object("window", xid)
 
     # Always on top
-    print(f"moving to {monitor_geom.x} {monitor_geom.y} {monitor_geom.width}")
-    ewmh.setMoveResizeWindow(
-        xlibwin,
-        x=monitor_geom.x,
-        y=monitor_geom.y + (monitor_geom.height - 150),
-        w=monitor_geom.width,
-        h=150,
+    winx, winy, winw, winh = (
+        monitor_geom.x,
+        monitor_geom.y + (monitor_geom.height - 150),
+        monitor_geom.width,
+        150,
     )
+    print(f"moving to {winx} {winy} ({winw} {winh})")
+    ewmh.setMoveResizeWindow(xlibwin, x=winx, y=winy, w=winw, h=winh)
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_ABOVE")
 
     # Draw even over the task bar (this breaks stuff)
@@ -123,6 +123,21 @@ def makeOneProgressBar(
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_TASKBAR")
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_PAGER")
     display.flush()
+
+    def showgeom() -> bool:
+        geom = xlibwin.get_geometry()
+        xdelta = winx - geom.x
+        print(f"xdelta: {xdelta}")
+        if xdelta:
+            ewmh.setMoveResizeWindow(
+                xlibwin, x=winx + xdelta, y=winy, w=winw - xdelta, h=winh
+            )
+            return True
+        else:
+            print("xdelta resolved")
+            return False
+
+    GLib.timeout_add(2000, showgeom)
     return win
 
 
