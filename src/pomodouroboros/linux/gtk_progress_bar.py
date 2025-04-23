@@ -53,12 +53,17 @@ progressbar.pomodoro trough {
 
 
 def makeOneProgressBar(
-    display: XOpenDisplay, monitor: Gdk.Monitor, ewmh: EWMH
+    display: XOpenDisplay, monitor: GdkX11.X11Monitor, ewmh: EWMH
 ) -> Gtk.ApplicationWindow:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
     win.set_decorated(False)
-    monitor_geom = monitor.get_geometry()
+
+    # note: deprecated, but there's no alternative; the general
+    # Gdk.Monitor.get_workarea() was removed in Gdk4, the X11 one is deprecated
+    # with no replacement.
+    monitor_geom = monitor.get_workarea()
+
     win.set_default_size(monitor_geom.width, 100)
 
     prog = Gtk.ProgressBar()
@@ -124,7 +129,10 @@ def makeOneProgressBar(
     ewmh.setWmState(xlibwin, 1, "_NET_WM_STATE_SKIP_PAGER")
     display.flush()
 
-    def showgeom() -> bool:
+    def reshuffle_geometry() -> bool:
+        if not win.is_visible():
+            print("window hidden")
+            return False
         geom = xlibwin.get_geometry()
         xdelta = winx - geom.x
         print(f"xdelta: {xdelta}")
@@ -137,7 +145,7 @@ def makeOneProgressBar(
             print("xdelta resolved")
             return False
 
-    GLib.timeout_add(2000, showgeom)
+    GLib.timeout_add(2000, reshuffle_geometry)
     return win
 
 
