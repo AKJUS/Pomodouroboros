@@ -30,7 +30,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==44.0.2
+cryptography==44.0.1
     # via
     #   pyopenssl
     #   service-identity
@@ -44,7 +44,7 @@ datetype==2025.2.13
     #   quickmacapp
 fritter==0.0.9
     # via Pomodouroboros (pyproject.toml)
-h11==0.14.0
+h11==0.16.0
     # via httpcore
 h2==4.2.0
     # via
@@ -151,7 +151,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==79.0.0
+setuptools==78.1.1
     # via
     #   incremental
     #   modulegraph
