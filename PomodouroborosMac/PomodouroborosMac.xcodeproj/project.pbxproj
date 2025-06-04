@@ -37,7 +37,7 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 1620;
 			};
-			buildConfigurationList = F08257CC2825F2960007B95F /* Build configuration list for PBXProject "IBFiles" */;
+			buildConfigurationList = F08257CC2825F2960007B95F /* Build configuration list for PBXProject "PomodouroborosMac" */;
 			compatibilityVersion = "Xcode 13.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -127,7 +127,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		F08257CC2825F2960007B95F /* Build configuration list for PBXProject "IBFiles" */ = {
+		F08257CC2825F2960007B95F /* Build configuration list for PBXProject "PomodouroborosMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F08257CD2825F2960007B95F /* Debug */,
