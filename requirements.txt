@@ -14,7 +14,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==44.0.2
+cryptography==45.0.3
     # via
     #   pyopenssl
     #   service-identity
@@ -48,7 +48,7 @@ pyasn1-modules==0.4.2
     # via service-identity
 pycparser==2.22
     # via cffi
-pyopenssl==25.0.0
+pyopenssl==25.1.0
     # via twisted
 python-dateutil==2.9.0.post0
     # via Pomodouroboros (pyproject.toml)
@@ -58,7 +58,7 @@ six==1.17.0
     # via python-dateutil
 twisted==24.11.0
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.13.2
+typing-extensions==4.14.0
     # via twisted
 tzdata==2025.2
     # via fritter
@@ -68,7 +68,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==79.0.0
+setuptools==80.9.0
     # via
     #   incremental
     #   zope-interface
