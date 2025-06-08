@@ -25,7 +25,7 @@ click==8.2.1
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==45.0.3
+cryptography==44.0.1
     # via
     #   pyopenssl
     #   service-identity
@@ -136,7 +136,7 @@ zope-schema==7.0.1
 # The following packages are considered to be unsafe in a requirements file:
 pip==25.1.1
     # via pip-tools
-setuptools==80.9.0
+setuptools==78.1.1
     # via
     #   incremental
     #   modulegraph

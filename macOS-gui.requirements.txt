@@ -30,7 +30,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==45.0.3
+cryptography==44.0.1
     # via
     #   pyopenssl
     #   service-identity
@@ -151,7 +151,7 @@ zope-interface==7.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==80.9.0
+setuptools==78.1.1
     # via
     #   incremental
     #   modulegraph
