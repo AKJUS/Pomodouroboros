@@ -63,7 +63,7 @@
                                 <menu key="submenu" title="Services" systemMenu="services" id="tPM-ae-db4"/>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="m9N-iI-e9j"/>
-                            <menuItem title="Hide NewApplication" keyEquivalent="h" id="afu-um-8DN">
+                            <menuItem title="Hide Pomodouroboros" keyEquivalent="h" id="afu-um-8DN">
                                 <connections>
                                     <action selector="hide:" target="-1" id="i1v-Jl-ycF"/>
                                 </connections>
@@ -81,7 +81,7 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="kWC-A2-8vk"/>
-                            <menuItem title="Quit NewApplication" keyEquivalent="q" id="R67-Jh-5Aj">
+                            <menuItem title="Quit Pomodouroboros" keyEquivalent="q" id="R67-Jh-5Aj">
                                 <connections>
                                     <action selector="terminate:" target="-1" id="y7f-vX-cMN"/>
                                 </connections>
@@ -378,7 +378,7 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="Help" systemMenu="help" id="qyb-Zh-dRA">
                         <items>
-                            <menuItem title="NewApplication Help" keyEquivalent="?" id="812-Lb-uSp">
+                            <menuItem title="Pomodouroboros Help" keyEquivalent="?" id="812-Lb-uSp">
                                 <connections>
                                     <action selector="showHelp:" target="-1" id="GWX-Vy-Nj7"/>
                                 </connections>
