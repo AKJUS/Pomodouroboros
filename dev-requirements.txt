@@ -25,7 +25,7 @@ click==8.2.1
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==45.0.3
+cryptography==45.0.5
     # via
     #   pyopenssl
     #   service-identity
@@ -59,13 +59,13 @@ macholib==1.16.3
     #   py2app
 modulegraph==0.19.6
     # via py2app
-mypy==1.16.0
+mypy==1.17.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   mypy-zope
 mypy-extensions==1.1.0
     # via mypy
-mypy-zope==1.0.12
+mypy-zope==1.0.13
     # via Pomodouroboros (pyproject.toml)
 packaging==25.0
     # via
@@ -102,15 +102,15 @@ service-identity==24.2.0
     # via twisted
 six==1.17.0
     # via python-dateutil
-twisted==24.11.0
+twisted==25.5.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   encrust
-types-python-dateutil==2.9.0.20250516
+types-python-dateutil==2.9.0.20250708
     # via Pomodouroboros (pyproject.toml)
 types-python-xlib==0.33.0.20250602
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.14.0
+typing-extensions==4.14.1
     # via
     #   delocate
     #   mypy
@@ -123,7 +123,7 @@ wheel==0.45.1
     # via pip-tools
 wheel-filename==1.4.2
     # via encrust
-zope-event==5.0
+zope-event==5.1.1
     # via zope-schema
 zope-interface==7.2
     # via

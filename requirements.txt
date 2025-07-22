@@ -14,7 +14,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==45.0.3
+cryptography==45.0.5
     # via
     #   pyopenssl
     #   service-identity
@@ -56,9 +56,9 @@ service-identity==24.2.0
     # via twisted
 six==1.17.0
     # via python-dateutil
-twisted==24.11.0
+twisted==25.5.0
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.14.0
+typing-extensions==4.14.1
     # via twisted
 tzdata==2025.2
     # via fritter
