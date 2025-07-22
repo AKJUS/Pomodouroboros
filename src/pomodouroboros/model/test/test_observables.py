@@ -287,7 +287,7 @@ class MaybeStr(Protocol):
 
 
 def getfunc(
-    key: tuple[object, ...] | str, o: object
+    key: str | tuple[object, ...] | str, o: object
 ) -> tuple[object, MaybeStr]:
 
     get: MaybeStr
@@ -323,7 +323,7 @@ class ChangeRecorder:
 
     @contextmanager
     def added(
-        self, key: tuple[object, ...] | str, new: object
+        self, key: str | tuple[object, ...] | str, new: object
     ) -> Iterator[None]:
         """
         C{value} was added for the given C{key}.
@@ -335,10 +335,10 @@ class ChangeRecorder:
 
     @contextmanager
     def removed(
-        self, key: tuple[object, ...], old: tuple[Any, ...]
+        self, key: str | tuple[object, ...], old: object
     ) -> Iterator[None]:
         """
-        C{key} was removed for the given C{key}.
+        C{key} (previously with the value C{old}) was removed.
         """
         rekey, get = getfunc(key, self.example)
         self.changes.append(("will remove", rekey, get(), old))
@@ -347,7 +347,7 @@ class ChangeRecorder:
 
     @contextmanager
     def changed(
-        self, key: tuple[object, ...], old: object, new: object
+        self, key: str | tuple[object, ...], old: object, new: object
     ) -> Iterator[None]:
         """
         C{value} was changed from C{old} to C{new} for the given C{key}.
