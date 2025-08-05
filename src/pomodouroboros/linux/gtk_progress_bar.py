@@ -10,8 +10,10 @@
 # python-xlib==0.33
 # six==1.16.0
 
+from dataclasses import dataclass, field
 from typing import Any
 
+from ..common import AnimValues
 from .platspec import (
     EWMH,
     Gdk,
@@ -20,7 +22,7 @@ from .platspec import (
     Gtk,
     RectangleInt,
     Region,
-    XOpenDisplay,
+    XDisplay,
 )
 
 css = Gtk.CssProvider()
@@ -40,6 +42,9 @@ progressbar.overlay text {
 progressbar.overlay trough, progress {
   min-height: 100px;
 }
+progressbar.pomodoro text {
+    font-size: 36px;
+}
 progressbar.pomodoro progress {
   background-image: none;
   background-color: #0f0;
@@ -53,8 +58,11 @@ progressbar.pomodoro trough {
 
 
 def makeOneProgressBar(
-    display: XOpenDisplay, monitor: GdkX11.X11Monitor, ewmh: EWMH
-) -> Gtk.ApplicationWindow:
+    app: Gtk.Application,
+    display: XDisplay,
+    monitor: GdkX11.X11Monitor,
+    ewmh: EWMH,
+) -> tuple[Gtk.ProgressBar, Gtk.ApplicationWindow]:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
     win.set_decorated(False)
@@ -69,23 +77,12 @@ def makeOneProgressBar(
     prog = Gtk.ProgressBar()
     prog.add_css_class("pomodoro")
     prog.add_css_class("overlay")
-    frac = 0.7
 
-    def refraction() -> bool:
-        nonlocal frac
-        frac += 0.01
-        frac %= 1.0
-        prog.set_fraction(frac)
-        return True
-
-    to = GLib.timeout_add((1000 // 10), refraction)
-    prog.set_fraction(0.7)
     win.set_child(prog)
 
     # we can't actually avoid getting focus, but in case the compositors ever
     # fix themselves, let's give it our best try
 
-    win.realize()
     win.set_can_focus(False)
     win.set_focusable(False)
     win.set_focus_on_click(False)
@@ -146,60 +143,99 @@ def makeOneProgressBar(
             return False
 
     GLib.timeout_add(2000, reshuffle_geometry)
-    return win
+    return (prog, win)
 
 
-# When the application is launched…
-def on_activate(app: Gtk.Application) -> None:
-    # … create a new window…
-    gdisplay = Gdk.Display.get_default()
-    assert gdisplay is not None, "cannot run without a display"
-    Gtk.StyleContext.add_provider_for_display(
-        gdisplay, css, Gtk.STYLE_PROVIDER_PRIORITY_USER
+@dataclass
+class MultiBar:
+    # required parameters
+    _ewmh: EWMH
+    _gtkApp: Gtk.Application
+    _gdkDisplay: Gdk.Display
+    _xDisplay: XDisplay
+
+    # internal state
+    _bars: list[tuple[Gtk.ProgressBar, Gtk.ApplicationWindow]] = field(
+        default_factory=list
     )
+    _percentage: float = 0.0
+    _alpha: float = 1.0
+    _text: str = ""
 
-    display = XOpenDisplay()
-    screen = display.screen()
-    ewmh = EWMH(display, screen.root)
-    bars: list[Gtk.ApplicationWindow] = []
+    def setPercentage(self, percentage: float) -> None:
+        self._percentage = percentage
+        for bar, win in self._bars:
+            bar.set_fraction(percentage)
 
-    def remonitor() -> bool:
-        print("remonitoring")
-        prevbars = bars[:]
+    def setAlpha(self, alpha: float) -> None:
+        """
+        Placeholder: should set the alpha blending of the windows.
+        """
+        for bar, win in self._bars:
+            win.set_opacity(alpha)
+
+    def setReticleText(self, newText: str) -> None:
+        self._text = newText
+        if newText:
+            for bar, win in self._bars:
+                bar.set_show_text(True)
+                bar.set_text(newText)
+        else:
+            for bar, win in self._bars:
+                bar.set_show_text(False)
+
+    def remonitor(self) -> bool:
+        prevbars = self._bars[:]
+        self._bars[:] = []
         # pygobject-stubs seems to have a bug where gdisplay.get_monitors()
         # yields Objects rather than Monitors
         monitor: Any
-        for monitor in gdisplay.get_monitors():
-            bars.append(makeOneProgressBar(display, monitor, ewmh))
-        for prevbar in prevbars:
-            prevbar.close()
+        for monitor in self._gdkDisplay.get_monitors():
+            self._bars.append(
+                makeOneProgressBar(
+                    self._gtkApp, self._xDisplay, monitor, self._ewmh
+                )
+            )
+        for prevbar, prevwin in prevbars:
+            prevwin.close()
         return False
 
-    def remonitor_later(
-        display: str,
-        path: str,
-        iface: str,
-        signal: str,
-        args: tuple[object, ...],
-    ) -> None:
-        print("remonitoring...", display)
-        GLib.timeout_add(1000, remonitor)
+    # When the application is launched…
+    @classmethod
+    def create(cls, app: Gtk.Application) -> AnimValues:
+        # … create a new window…
+        gdisplay = Gdk.Display.get_default()
+        assert gdisplay is not None, "cannot run without a display"
+        Gtk.StyleContext.add_provider_for_display(
+            gdisplay, css, Gtk.STYLE_PROVIDER_PRIORITY_USER
+        )
 
-    from pydbus import SessionBus
+        xdisplay = XDisplay()
+        xscreen = xdisplay.screen()
+        self = cls(
+            EWMH(xdisplay, xscreen.root),
+            app,
+            gdisplay,
+            xdisplay,
+        )
 
-    bus = SessionBus()
-    bus.subscribe(
-        iface="org.gnome.Mutter.DisplayConfig",
-        signal="MonitorsChanged",
-        signal_fired=remonitor_later,
-    )
-    remonitor()
+        def remonitor_later(
+            display: str,
+            path: str,
+            iface: str,
+            signal: str,
+            args: tuple[object, ...],
+        ) -> None:
+            print("remonitoring...", display)
+            GLib.timeout_add(1000, self.remonitor)
 
+        from pydbus import SessionBus
 
-if __name__ == "__main__":
-    # Create a new application
-    app = Gtk.Application(application_id="com.example.GtkApplication")
-    app.connect("activate", on_activate)
-
-    # Run the application
-    app.run(None)
+        bus = SessionBus()
+        bus.subscribe(
+            iface="org.gnome.Mutter.DisplayConfig",
+            signal="MonitorsChanged",
+            signal_fired=remonitor_later,
+        )
+        self.remonitor()
+        return self

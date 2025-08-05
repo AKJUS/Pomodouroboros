@@ -47,6 +47,7 @@ from twisted.python.failure import Failure
 from ..model.debugger import debug
 from ..model.util import fallible, showFailures
 from ..storage import TEST_MODE
+from ..common import animatePct
 
 log = Logger()
 
@@ -273,43 +274,6 @@ def textOpacityCurve(startTime: float, duration: float, now: float) -> float:
     return sin(((progressPercent * oomph) + oomph) * (pi / 2)) * maxOpacity
 
 
-class AnimValues(Protocol):
-    def setPercentage(self, percentage: float) -> None: ...
-
-    def setAlpha(self, alpha: float) -> None: ...
-
-
-def animatePct(
-    values: AnimValues,
-    clock: IReactorTime,
-    percentageElapsed: float,
-    previousPercentageElapsed: float,
-    pulseTime: float,
-    baseAlphaValue: float,
-    alphaVariance: float,
-) -> Deferred[None]:
-    if percentageElapsed < previousPercentageElapsed:
-        previousPercentageElapsed = 0
-    elapsedDelta = percentageElapsed - previousPercentageElapsed
-    startTime = clock.seconds()
-
-    def updateSome() -> None:
-        now = clock.seconds()
-        percentDone = (now - startTime) / pulseTime
-        easedEven = math.sin((percentDone * math.pi))
-        easedUp = math.sin((percentDone * math.pi) / 2.0)
-        values.setPercentage(
-            previousPercentageElapsed + (easedUp * elapsedDelta)
-        )
-        if percentDone >= 1.0:
-            alphaValue = baseAlphaValue
-            lc.stop()
-        else:
-            alphaValue = (easedEven * alphaVariance) + baseAlphaValue
-        values.setAlpha(alphaValue)
-
-    lc = LoopingCall(updateSome)
-    return lc.start(1.0 / 30.0).addCallback(lambda ignored: None)
 
 
 @dataclass
