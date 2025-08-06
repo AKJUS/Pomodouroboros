@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
+<!-- Created with Cambalache 0.96.1 -->
+<cambalache-project version="0.96.0" target_tk="gtk-4.0">
+  <ui filename="linuxlegacypom.ui" sha256="f96f8e21f807dc938bab11b8bf11e4301c5e82987b17121b4d73547e3f0e5ace"/>
+</cambalache-project>
