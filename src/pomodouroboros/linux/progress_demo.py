@@ -1,4 +1,3 @@
-
 from itertools import cycle
 from pathlib import Path
 
@@ -7,7 +6,7 @@ from twisted.internet.task import deferLater
 
 from ..common import animatePct
 from .gtk_progress_bar import MultiBar
-from .platspec import Gtk
+from .platspec import Gtk, GObject
 
 if __name__ == "__main__":
     from twisted.internet.gireactor import install
@@ -21,26 +20,46 @@ if __name__ == "__main__":
     # print("dark", settings.get_property("gtk-application-prefer-dark-theme"))
     # for i in settings.list_properties():
     #     print(i)
-    def _on_theme_name_changed(settings, gparam):
+
+    def _on_theme_name_changed(
+        settings: Gtk.Settings, gparam: GObject.Parameter
+    ) -> None:
         print("Theme name:", settings.get_property("gtk-theme-name"))
-    Gtk.Settings.get_default().connect("notify::gtk-theme-name", _on_theme_name_changed)
-    def _on_dark_changed(settings, gparam):
-        print("dark:", settings.get_property("gtk-application-prefer-dark-theme"))
-    Gtk.Settings.get_default().connect("notify::gtk-application-prefer-dark-theme", _on_dark_changed)
+
+    settings = Gtk.Settings.get_default()
+    assert settings is not None
+    settings.connect("notify::gtk-theme-name", _on_theme_name_changed)
+
+    def _on_dark_changed(
+        settings: Gtk.Settings, gparam: GObject.Parameter
+    ) -> None:
+        print(
+            "dark:", settings.get_property("gtk-application-prefer-dark-theme")
+        )
+
+    settings.connect(
+        "notify::gtk-application-prefer-dark-theme", _on_dark_changed
+    )
 
     def makeBar(app: Gtk.Application) -> None:
         bar = MultiBar.create(app)
-        stuff = Gtk.Builder.new_from_file(str(Path(__file__).parent/"linuxlegacypom.ui"))
-        stuff.get_object("my-window").present()
+        stuff = Gtk.Builder.new_from_file(
+            str(Path(__file__).parent / "linuxlegacypom.ui")
+        )
+        loaded: object = stuff.get_object("my-window")
+        assert isinstance(loaded, Gtk.Window)
+        loaded.present()
 
-        texts = cycle([
-            "let's start with this text",
-            "then move on to this text",
-            "then hide the text",
-            "",
-            "",
-            "",
-        ])
+        texts = cycle(
+            [
+                "let's start with this text",
+                "then move on to this text",
+                "then hide the text",
+                "",
+                "",
+                "",
+            ]
+        )
 
         async def forever() -> None:
             pct = 0.0
