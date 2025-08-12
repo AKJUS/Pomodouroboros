@@ -38,6 +38,7 @@
                     <property name="factory">
                       <object class="GtkSignalListItemFactory"/>
                     </property>
+                    <property name="id">number</property>
                     <property name="title">#</property>
                   </object>
                 </child>
@@ -46,6 +47,7 @@
                     <property name="factory">
                       <object class="GtkSignalListItemFactory" id="description-item-factory"/>
                     </property>
+                    <property name="id">description</property>
                     <property name="title">description</property>
                   </object>
                 </child>
@@ -54,6 +56,7 @@
                     <property name="factory">
                       <object class="GtkSignalListItemFactory"/>
                     </property>
+                    <property name="id">start</property>
                     <property name="title">start</property>
                   </object>
                 </child>
@@ -62,6 +65,7 @@
                     <property name="factory">
                       <object class="GtkSignalListItemFactory"/>
                     </property>
+                    <property name="id">end</property>
                     <property name="title">end</property>
                   </object>
                 </child>
@@ -70,6 +74,7 @@
                     <property name="factory">
                       <object class="GtkSignalListItemFactory"/>
                     </property>
+                    <property name="id">success</property>
                     <property name="title">success</property>
                   </object>
                 </child>

@@ -8,29 +8,7 @@ from twisted.internet.task import deferLater
 from ..common import animatePct
 from .gtk_progress_bar import MultiBar
 from .platspec import Gio, GObject, Gtk
-
-T = TypeVar("T")
-
-
-def gSimpleProp(name: str, type: type[T]) -> T:
-    gprop = GObject.Property(type=type)
-    storeName = f"_{name}"
-
-    def getter(self: object) -> T:
-        result: T = getattr(self, storeName)
-        return result
-
-    getter.__name__ = name
-
-    prop = gprop(getter)
-
-    @prop.setter
-    def setter(self: object, value: Any) -> None:
-        setattr(self, storeName, value)
-
-    # return type is a polite fiction for class scope
-    return setter  # type:ignore[return-value]
-
+from .gobj_utils import gSimpleProp
 
 class PomItemModel(GObject.Object):
     __gtype_name__ = "PomItemModel"
