@@ -1,0 +1,40 @@
+progressbar.overlay text {
+  color: yellow;
+  font-weight: bold;
+}
+progressbar.overlay trough, progress {
+  min-height: 100px;
+}
+progressbar.pomodoro text {
+    font-size: 36px;
+}
+progressbar.pomodoro progress, progressbar.pomodoro trough {
+  background-image: none;
+}
+progressbar.pomodoro.active progress {
+    background-color: #0f0;
+}
+progressbar.pomodoro.active trough {
+    background-color: #00f;
+}
+
+progressbar.pomodoro.prompt progress {
+    background-color: #f00;
+}
+progressbar.pomodoro.prompt trough {
+    background-color: #444;
+}
+
+progressbar.pomodoro.break progress {
+    background-color: #aaa;
+}
+progressbar.pomodoro.break trough {
+    background-color: #444;
+}
+
+progressbar.pomodoro.grace progress {
+    background-color: #a0a;
+}
+progressbar.pomodoro.grace trough {
+    background-color: #707;
+}

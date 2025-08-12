@@ -43,7 +43,7 @@ def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
         # assert isinstance(
         #     itemsItem, PomItemModel
         # ), "should be added with store.insert"
-        widget.set_label(getattr(itemsItem, name))
+        widget.set_label(str(getattr(itemsItem, name)))
         itemsItem.bind_property(
             name,
             widget,

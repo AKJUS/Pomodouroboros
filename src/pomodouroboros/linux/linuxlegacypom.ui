@@ -36,7 +36,7 @@
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
-                      <object class="GtkSignalListItemFactory"/>
+                      <object class="GtkSignalListItemFactory" id="number-item-factory"/>
                     </property>
                     <property name="id">number</property>
                     <property name="title">#</property>
