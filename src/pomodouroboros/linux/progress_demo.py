@@ -6,19 +6,10 @@ from twisted.internet.defer import Deferred
 from twisted.internet.task import deferLater
 
 from ..common import animatePct
+from .old_gtk_gui import PomItemModel
 from .gtk_progress_bar import MultiBar
 from .platspec import Gio, GObject, Gtk
 from .gobj_utils import gSimpleProp, bindLabelColumns
-
-
-class PomItemModel(GObject.Object):
-    __gtype_name__ = "PomItemModel"
-
-    number = gSimpleProp("number", int)
-    description = gSimpleProp("description", str)
-    start = gSimpleProp("start", str)
-    end = gSimpleProp("end", str)
-    success = gSimpleProp("success", str)
 
 
 if __name__ == "__main__":
@@ -81,9 +72,9 @@ if __name__ == "__main__":
         assert isinstance(store, Gio.ListStore), store
 
         print("creating model")
-        one = PomItemModel(description="one", number=1)
+        one = PomItemModel(description="one", number=1, editable=True)
         store.insert(0, one)
-        two = PomItemModel(description="two", number=2)
+        two = PomItemModel(description="two", number=2, editable=False)
         store.insert(0, two)
         # store.insert(1, one)
 

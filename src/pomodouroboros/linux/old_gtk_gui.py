@@ -57,6 +57,7 @@ class LinuxPomObserver:
                     start=row["startTime"],
                     end=row["endTime"],
                     success=row["success"],
+                    editable=row["canChange"],
                 )
             )
 
@@ -110,7 +111,6 @@ class LinuxPomObserver:
         self.multiBar.setPercentage(percentageElapsed)
         # self.refreshData()
 
-
     def dayOver(self) -> None:
         """
         The day is over, so there will be no more intervals.
@@ -126,6 +126,10 @@ class PomItemModel(GObject.Object):
     start = gSimpleProp("start", str)
     end = gSimpleProp("end", str)
     success = gSimpleProp("success", str)
+    editable = gSimpleProp("editable", bool, False)
+
+    def canEditProperty(self, name: str) -> bool:
+        return self.editable and name == "description"
 
 
 def wireUpList(builder: Gtk.Builder) -> None:
@@ -149,6 +153,7 @@ async def main(reactor: Any, app: Gtk.Application) -> None:
     store = builder.get_object("the-list-store")
     assert isinstance(store, Gio.ListStore)
     wireUpList(builder)
+
     def bootApp(app: Gtk.Application) -> None:
         bar = MultiBar.create(app)
         linuxPomObserver = LinuxPomObserver(bar, day, store, reactor)
@@ -160,6 +165,7 @@ async def main(reactor: Any, app: Gtk.Application) -> None:
             day.advanceToTime(reactor.seconds(), linuxPomObserver)
 
         repeatedly(scheduler, updateUI, EverySecond(5))
+        linuxPomObserver.refreshData()
 
     loaded: object = builder.get_object("my-window")
     assert isinstance(loaded, Gtk.Window)
@@ -168,10 +174,14 @@ async def main(reactor: Any, app: Gtk.Application) -> None:
     app.connect("activate", bootApp)
     await Deferred()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from twisted.internet.gireactor import install
+
     greactor = install()
     app = Gtk.Application(application_id="im.glyph.and.this.is.Pomodouroboros")
     greactor.registerGApplication(app)
-    greactor.callWhenRunning(lambda: Deferred.fromCoroutine(main(greactor, app)))
+    greactor.callWhenRunning(
+        lambda: Deferred.fromCoroutine(main(greactor, app))
+    )
     greactor.run()
