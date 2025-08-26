@@ -10,6 +10,8 @@
 # python-xlib==0.33
 # six==1.16.0
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
