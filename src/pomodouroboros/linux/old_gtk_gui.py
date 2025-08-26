@@ -5,6 +5,7 @@ Hopefully we can replace this with the new model (pomodouroboros.model) in not
 too long, but it's just too complex and unfinished to start with; hopefully
 some contributors will come along and help out once a linux version exists!
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date as Date
@@ -30,6 +31,7 @@ from .platspec import Gio, GObject, Gtk
 @dataclass
 class LinuxPomObserver:
     multiBar: MultiBar
+    loader: DayLoader
     day: Day
     store: Gio.ListStore
     reactor: Any
@@ -50,16 +52,29 @@ class LinuxPomObserver:
             if isinstance(each, Pomodoro)
         ]
         for row in poms2Dicts(day, now, onlyPoms):
-            self.store.append(
-                PomItemModel(
-                    number=row["index"],
-                    description=row["description"],
-                    start=row["startTime"],
-                    end=row["endTime"],
-                    success=row["success"],
-                    editable=row["canChange"],
-                )
+            model = PomItemModel(
+                number=row["index"],
+                description=row["description"],
+                start=row["startTime"],
+                end=row["endTime"],
+                success=row["success"],
+                editable=row["canChange"],
             )
+            pom = row["pom"]
+            assert isinstance(pom, Pomodoro)
+            self.bindDescriptionEdit(model, pom)
+            self.store.append(model)
+
+    def bindDescriptionEdit(self, model: PomItemModel, pom: Pomodoro) -> None:
+        def change(item: PomItemModel, pspec: object) -> None:
+            print("change notify", item, pspec)
+            result = self.day.expressIntention(
+                self.reactor.seconds(), model.description, pom
+            )
+            print(f"setting intention for {pom}: {result}")
+            self.loader.saveDay(self.day)
+        # TODO: keep track of old description so we can change it back if this wasn't allowed
+        model.connect("notify::description", change)
 
     def pomodoroStarting(self, day: Day, startingPomodoro: Pomodoro) -> None:
         """
@@ -156,7 +171,9 @@ async def main(reactor: Any, app: Gtk.Application) -> None:
 
     def bootApp(app: Gtk.Application) -> None:
         bar = MultiBar.create(app)
-        linuxPomObserver = LinuxPomObserver(bar, day, store, reactor)
+        linuxPomObserver = LinuxPomObserver(
+            bar, dayLoader, day, store, reactor
+        )
 
         def updateUI(steps: int, scheduled: ScheduledCall) -> None:
             # TODO: refactor with
