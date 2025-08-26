@@ -1,5 +1,7 @@
 """
-Cross-platform stuff that isn't really part of the model, just general UI utility things that don't depend on anything platform specific.
+Cross-platform stuff that isn't really part of the model, just general UI
+utility things that don't depend on anything platform specific, or a specific
+version of the model (i.e. old-style .pommodel or new-style .model).
 """
 
 import math
@@ -39,6 +41,7 @@ def animatePct(
 
     def updateSome() -> None:
         now = clock.seconds()
+
         percentDone = (now - startTime) / pulseTime
         easedEven = math.sin((percentDone * math.pi))
         easedUp = math.sin((percentDone * math.pi) / 2.0)

@@ -148,6 +148,7 @@ class MultiBar:
     _alpha: float = 1.0
     _text: str = ""
     _cssClasses: list[str] = field(default_factory=lambda: BASE_CLASSES[:])
+    _visible: bool = True
 
     def setCssClasses(self, cssClasses: list[str]) -> None:
         self._cssClasses = cssClasses
@@ -156,6 +157,9 @@ class MultiBar:
 
     def setStyle(self, cssClass: str)-> None:
         self.setCssClasses(BASE_CLASSES + [cssClass])
+
+    def percentage(self) -> float:
+        return self._percentage
 
     def setPercentage(self, percentage: float) -> None:
         self._percentage = percentage
@@ -178,6 +182,18 @@ class MultiBar:
         else:
             for bar, win in self._bars:
                 bar.set_show_text(False)
+
+    def hide(self) -> None:
+        if self._visible:
+            self._visible = False
+            for bar, win in self._bars:
+                win.hide()
+
+    def show(self) -> None:
+        if not self._visible:
+            self._visible = True
+            for bar, win in self._bars:
+                win.present()
 
     def remonitor(self) -> bool:
         prevbars = self._bars[:]
