@@ -10,7 +10,10 @@
 # python-xlib==0.33
 # six==1.16.0
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ..common import AnimValues
@@ -34,27 +37,10 @@ css = Gtk.CssProvider()
 # """)
 
 css.load_from_data(
-    """
-progressbar.overlay text {
-  color: yellow;
-  font-weight: bold;
-}
-progressbar.overlay trough, progress {
-  min-height: 100px;
-}
-progressbar.pomodoro text {
-    font-size: 36px;
-}
-progressbar.pomodoro progress {
-  background-image: none;
-  background-color: #0f0;
-}
-progressbar.pomodoro trough {
- background-image: none;
- background-color: #00f;
-}
-"""
+    (Path(__file__).parent / "progbar.css").read_text(),
 )
+
+BASE_CLASSES = ["pomodoro", "overlay"]
 
 
 def makeOneProgressBar(
@@ -62,6 +48,7 @@ def makeOneProgressBar(
     display: XDisplay,
     monitor: GdkX11.X11Monitor,
     ewmh: EWMH,
+    cssClasses: list[str],
 ) -> tuple[Gtk.ProgressBar, Gtk.ApplicationWindow]:
     win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
     win.set_opacity(0.25)
@@ -75,8 +62,7 @@ def makeOneProgressBar(
     win.set_default_size(monitor_geom.width, 100)
 
     prog = Gtk.ProgressBar()
-    prog.add_css_class("pomodoro")
-    prog.add_css_class("overlay")
+    prog.set_css_classes(cssClasses)
 
     win.set_child(prog)
 
@@ -161,6 +147,19 @@ class MultiBar:
     _percentage: float = 0.0
     _alpha: float = 1.0
     _text: str = ""
+    _cssClasses: list[str] = field(default_factory=lambda: BASE_CLASSES[:])
+    _visible: bool = True
+
+    def setCssClasses(self, cssClasses: list[str]) -> None:
+        self._cssClasses = cssClasses
+        for bar, win in self._bars:
+            bar.set_css_classes(cssClasses)
+
+    def setStyle(self, cssClass: str)-> None:
+        self.setCssClasses(BASE_CLASSES + [cssClass])
+
+    def percentage(self) -> float:
+        return self._percentage
 
     def setPercentage(self, percentage: float) -> None:
         self._percentage = percentage
@@ -184,6 +183,18 @@ class MultiBar:
             for bar, win in self._bars:
                 bar.set_show_text(False)
 
+    def hide(self) -> None:
+        if self._visible:
+            self._visible = False
+            for bar, win in self._bars:
+                win.hide()
+
+    def show(self) -> None:
+        if not self._visible:
+            self._visible = True
+            for bar, win in self._bars:
+                win.present()
+
     def remonitor(self) -> bool:
         prevbars = self._bars[:]
         self._bars[:] = []
@@ -193,7 +204,11 @@ class MultiBar:
         for monitor in self._gdkDisplay.get_monitors():
             self._bars.append(
                 makeOneProgressBar(
-                    self._gtkApp, self._xDisplay, monitor, self._ewmh
+                    self._gtkApp,
+                    self._xDisplay,
+                    monitor,
+                    self._ewmh,
+                    self._cssClasses,
                 )
             )
         for prevbar, prevwin in prevbars:
@@ -202,7 +217,7 @@ class MultiBar:
 
     # When the application is launched…
     @classmethod
-    def create(cls, app: Gtk.Application) -> AnimValues:
+    def create(cls, app: Gtk.Application) -> MultiBar:
         # … create a new window…
         gdisplay = Gdk.Display.get_default()
         assert gdisplay is not None, "cannot run without a display"

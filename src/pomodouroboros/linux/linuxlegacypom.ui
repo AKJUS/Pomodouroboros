@@ -36,7 +36,7 @@
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
-                      <object class="GtkSignalListItemFactory"/>
+                      <object class="GtkSignalListItemFactory" id="number-item-factory"/>
                     </property>
                     <property name="id">number</property>
                     <property name="title">#</property>
@@ -54,7 +54,7 @@
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
-                      <object class="GtkSignalListItemFactory"/>
+                      <object class="GtkSignalListItemFactory" id="start-item-factory"/>
                     </property>
                     <property name="id">start</property>
                     <property name="title">start</property>
@@ -63,7 +63,7 @@
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
-                      <object class="GtkSignalListItemFactory"/>
+                      <object class="GtkSignalListItemFactory" id="end-item-factory"/>
                     </property>
                     <property name="id">end</property>
                     <property name="title">end</property>
@@ -72,7 +72,7 @@
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
-                      <object class="GtkSignalListItemFactory"/>
+                      <object class="GtkSignalListItemFactory" id="success-item-factory"/>
                     </property>
                     <property name="id">success</property>
                     <property name="title">success</property>

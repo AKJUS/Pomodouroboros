@@ -6,18 +6,10 @@ from twisted.internet.defer import Deferred
 from twisted.internet.task import deferLater
 
 from ..common import animatePct
+from .old_gtk_gui import PomItemModel
 from .gtk_progress_bar import MultiBar
 from .platspec import Gio, GObject, Gtk
-from .gobj_utils import gSimpleProp
-
-class PomItemModel(GObject.Object):
-    __gtype_name__ = "PomItemModel"
-
-    number = gSimpleProp("number", int)
-    description = gSimpleProp("description", str)
-    start = gSimpleProp("start", str)
-    end = gSimpleProp("end", str)
-    success = gSimpleProp("success", str)
+from .gobj_utils import gSimpleProp, bindLabelColumns
 
 
 if __name__ == "__main__":
@@ -58,58 +50,20 @@ if __name__ == "__main__":
         # def pom_bind_inner() -> None:
         #     print("pom_bind_inner!!!!!!!*!********!")
         builder = Gtk.Builder.new()
-        # cscope = Gtk.BuilderCScope.new()
-        # scope: Gtk.Builder.BuilderScope = cscope  # type:ignore[assignment]
-        # builder.set_scope(scope)
-        # cscope.add_callback_symbol(
-        #     "pom_bind",
-        #     pom_bind_inner,  # type:ignore
-        # )
-        # c = builder.create_closure("pom_bind", Gtk. BuilderClosureFlags(0))
-        # print("created", c)
         builder.add_from_file(str(Path(__file__).parent / "linuxlegacypom.ui"))
         print("added")
 
         # set up column views
-
-        itemFactory = builder.get_object("description-item-factory")
-        assert isinstance(itemFactory, Gtk.SignalListItemFactory)
-
-        def descriptionItemSetup(
-            itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
-        ) -> None:
-            """
-            Item setup callback: construct a Gtk.Widget and call set_child on
-            item with it.
-            """
-            print("setup")
-            label = Gtk.Label(halign=Gtk.Align.START)
-            label.set_selectable(False)
-            item.set_child(label)
-
-        itemFactory.connect("setup", descriptionItemSetup)
-
-        def descriptionItemBind(
-            itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
-        ) -> None:
-            print("bind")
-            widget = item.get_child()
-            assert isinstance(
-                widget, Gtk.Label
-            ), "should be set up in descriptionItemSetup"
-            itemsItem = item.get_item()
-            assert isinstance(
-                itemsItem, PomItemModel
-            ), "should be added with store.insert"
-            widget.set_label(itemsItem.description)
-            itemsItem.bind_property(
-                "description",
-                widget,
-                "label",
-                GObject.BindingFlags.SYNC_CREATE,
-            )
-
-        itemFactory.connect("bind", descriptionItemBind)
+        descriptionItemFactory = builder.get_object("description-item-factory")
+        assert isinstance(descriptionItemFactory, Gtk.SignalListItemFactory)
+        numberItemFactory = builder.get_object("number-item-factory")
+        assert isinstance(numberItemFactory, Gtk.SignalListItemFactory)
+        bindLabelColumns(
+            {
+                "description": descriptionItemFactory,
+                "number": numberItemFactory,
+            }
+        )
 
         loaded: object = builder.get_object("my-window")
         assert isinstance(loaded, Gtk.Window)
@@ -118,16 +72,20 @@ if __name__ == "__main__":
         assert isinstance(store, Gio.ListStore), store
 
         print("creating model")
-        one = PomItemModel(description="one")
+        one = PomItemModel(description="one", number=1, editable=True)
         store.insert(0, one)
-        two = PomItemModel(description="two")
+        two = PomItemModel(description="two", number=2, editable=False)
         store.insert(0, two)
         # store.insert(1, one)
 
         button = builder.get_object("debug-button")
-        def setdesc(theButton: Gtk.Button)->None:
+
+        def setdesc(theButton: Gtk.Button) -> None:
             one.description = "three"
-        assert isinstance(button, Gtk.Button), "should be a button declared in the UI"
+
+        assert isinstance(
+            button, Gtk.Button
+        ), "should be a button declared in the UI"
         button.connect("clicked", setdesc)
 
         texts = cycle(
@@ -140,6 +98,7 @@ if __name__ == "__main__":
                 "",
             ]
         )
+        styles = cycle(["active", "prompt", "break", "grace"])
 
         async def forever() -> None:
             pct = 0.0
@@ -160,6 +119,8 @@ if __name__ == "__main__":
                 newText = next(texts)
                 print(f"setting reticle text {newText!r}")
                 bar.setReticleText(newText)
+                newStyle = next(styles)
+                bar.setStyle(newStyle)
 
         Deferred.fromCoroutine(forever())
 

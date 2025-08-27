@@ -3,8 +3,8 @@ from typing import Any
 from .platspec import GObject, Gtk
 
 
-def gSimpleProp[T](name: str, type: type[T]) -> T:
-    gprop = GObject.Property(type=type)
+def gSimpleProp[T](name: str, type: type[T], default: T | None = None) -> T:
+    gprop = GObject.Property(type=type, default=default)
     storeName = f"_{name}"
 
     def getter(self: object) -> T:
@@ -24,40 +24,63 @@ def gSimpleProp[T](name: str, type: type[T]) -> T:
 
 
 def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
+    print(f"binding attribute {name}")
+
+    bindings = {}
+
     def setup(
         itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
     ) -> None:
-        label = Gtk.Label(halign=Gtk.Align.START)
-        label.set_selectable(False)
+        print(f"setting up label for {name}")
+        label = Gtk.EditableLabel(halign=Gtk.Align.START)
+        # label.set_selectable(False)
         item.set_child(label)
+        print(f"finished setup for {name}")
 
     def bind(
         itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
     ) -> None:
         widget = item.get_child()
         assert isinstance(
-            widget, Gtk.Label
-        ), "should be set up in descriptionItemSetup"
-        itemsItem = item.get_item()
+            widget, Gtk.EditableLabel
+        ), "should be set up in setup()"
+        itemsItem: Any = item.get_item()
         assert itemsItem is not None, "every item should be setup()"
+        # TODO: let's have actual type information for canEditProperty
+        widget.set_editable(itemsItem.canEditProperty(name))
         # assert isinstance(
         #     itemsItem, PomItemModel
         # ), "should be added with store.insert"
-        widget.set_label(getattr(itemsItem, name))
-        itemsItem.bind_property(
+        # widget.set_text(str(getattr(itemsItem, name)))
+        print(f"binding {itemsItem} to {widget}")
+        bindings[(name, widget)] = itemsItem.bind_property(
             name,
             widget,
-            "label",
-            GObject.BindingFlags.SYNC_CREATE,
+            "text",
+            GObject.BindingFlags.BIDIRECTIONAL
+            | GObject.BindingFlags.SYNC_CREATE,
         )
 
-    # per https://toshiocp.github.io/Gtk4-tutorial/sec29.html, unbind and
-    # teardown *should* be taken care of by the GC? if we have resource leaks,
-    # we might want to investigate connecting them here.
+    def unbind(
+        itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
+    ) -> None:
+        widget = item.get_child()
+        print(f"unbinding {name} from {widget}")
+        assert isinstance(
+            widget, Gtk.EditableLabel
+        ), "should be set up in setup()"
+        bindings.pop((name, widget)).unbind()
+
+    # per https://toshiocp.github.io/Gtk4-tutorial/sec29.html, teardown
+    # *should* be taken care of by the GC? if we have resource leaks, we might
+    # want to investigate connecting them here.
     factory.connect("setup", setup)
     factory.connect("bind", bind)
+    factory.connect("unbind", unbind)
 
 
-def bindLabelColumns(itemFactories: dict[str, Gtk.SignalListItemFactory]) -> None:
+def bindLabelColumns(
+    itemFactories: dict[str, Gtk.SignalListItemFactory],
+) -> None:
     for attrName, listItemFactory in itemFactories.items():
         _bindOneAttribute(attrName, listItemFactory)
