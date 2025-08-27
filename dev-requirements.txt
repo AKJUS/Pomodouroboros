@@ -15,7 +15,7 @@ attrs==25.3.0
     #   twisted
 automat==25.4.16
     # via twisted
-build==1.2.2.post1
+build==1.3.0
     # via pip-tools
 cffi==1.17.1
     # via cryptography
@@ -25,7 +25,7 @@ click==8.2.1
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==45.0.5
+cryptography==45.0.6
     # via
     #   pyopenssl
     #   service-identity
@@ -39,7 +39,7 @@ encrust==2025.4.4.2 ; sys_platform == "darwin"
     # via Pomodouroboros (pyproject.toml)
 fritter==0.0.9
     # via Pomodouroboros (pyproject.toml)
-h2==4.2.0
+h2==4.3.0
     # via twisted
 hpack==4.1.0
     # via h2
@@ -59,7 +59,7 @@ macholib==1.16.3
     #   py2app
 modulegraph==0.19.6
     # via py2app
-mypy==1.17.0
+mypy==1.17.1
     # via
     #   Pomodouroboros (pyproject.toml)
     #   mypy-zope
@@ -74,7 +74,7 @@ packaging==25.0
     #   py2app
 pathspec==0.12.1
     # via mypy
-pip-tools==7.4.1
+pip-tools==7.5.0
     # via Pomodouroboros (pyproject.toml)
 priority==1.3.0
     # via twisted
@@ -106,11 +106,11 @@ twisted==25.5.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   encrust
-types-python-dateutil==2.9.0.20250708
+types-python-dateutil==2.9.0.20250822
     # via Pomodouroboros (pyproject.toml)
-types-python-xlib==0.33.0.20250602
+types-python-xlib==0.33.0.20250809
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   delocate
     #   mypy
@@ -130,11 +130,11 @@ zope-interface==7.2
     #   mypy-zope
     #   twisted
     #   zope-schema
-zope-schema==7.0.1
+zope-schema==7.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==25.1.1
+pip==25.2
     # via pip-tools
 setuptools==80.9.0
     # via

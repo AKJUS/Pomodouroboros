@@ -9,7 +9,7 @@ altgraph==0.17.4
     #   macholib
     #   modulegraph
     #   py2app
-anyio==4.9.0
+anyio==4.10.0
     # via httpx
 appdirs==1.4.4
     # via twisted
@@ -22,7 +22,7 @@ automat==25.4.16
     # via twisted
 bcrypt==4.3.0
     # via twisted
-certifi==2025.7.14
+certifi==2025.8.3
     # via
     #   httpcore
     #   httpx
@@ -30,7 +30,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==45.0.5
+cryptography==45.0.6
     # via
     #   pyopenssl
     #   service-identity
@@ -48,7 +48,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   wsproto
-h2==4.2.0
+h2==4.3.0
     # via
     #   httpx
     #   twisted
@@ -62,7 +62,7 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.136.2
+hypothesis==6.138.3
     # via twisted
 idna==3.10
     # via
@@ -112,6 +112,7 @@ pyobjc-framework-cocoa==11.1 ; sys_platform == "darwin"
     #   pyobjc-framework-exceptionhandling
     #   pyobjc-framework-usernotifications
     #   quickmacapp
+    #   quickmachotkey
     #   twisted
 pyobjc-framework-exceptionhandling==11.1 ; sys_platform == "darwin"
     # via
@@ -129,7 +130,7 @@ python-dateutil==2.9.0.post0
     # via Pomodouroboros (pyproject.toml)
 quickmacapp==2025.7.22 ; sys_platform == "darwin"
     # via Pomodouroboros (pyproject.toml)
-quickmachotkey==2023.11.17 ; sys_platform == "darwin"
+quickmachotkey==2025.7.28 ; sys_platform == "darwin"
     # via Pomodouroboros (pyproject.toml)
 service-identity==24.2.0
     # via twisted
@@ -143,7 +144,7 @@ twisted==25.5.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   quickmacapp
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via twisted
 tzdata==2025.2
     # via fritter

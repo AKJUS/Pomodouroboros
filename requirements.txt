@@ -14,7 +14,7 @@ cffi==1.17.1
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==45.0.5
+cryptography==45.0.6
     # via
     #   pyopenssl
     #   service-identity
@@ -24,7 +24,7 @@ datetype==2025.2.13
     #   fritter
 fritter==0.0.9
     # via Pomodouroboros (pyproject.toml)
-h2==4.2.0
+h2==4.3.0
     # via twisted
 hpack==4.1.0
     # via h2
@@ -58,7 +58,7 @@ six==1.17.0
     # via python-dateutil
 twisted==25.5.0
     # via Pomodouroboros (pyproject.toml)
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via twisted
 tzdata==2025.2
     # via fritter
