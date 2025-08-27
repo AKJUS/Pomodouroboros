@@ -122,6 +122,7 @@ class AbstractProgressView(NSView):
         win.setContentView_(self)
         win.setOpaque_(False)
         win.setBackgroundColor_(NSColor.clearColor())
+        win.setHasShadow_(False)
 
     def changeAlphaValue_forWindow_(
         self, newAlphaValue: float, win: NSWindow
