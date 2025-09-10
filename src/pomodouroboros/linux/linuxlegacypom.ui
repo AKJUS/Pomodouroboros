@@ -83,8 +83,17 @@
           </object>
         </child>
         <child>
-          <object class="GtkButton" id="debug-button">
-            <property name="label">Set A Description</property>
+          <object class="GtkBox">
+            <child>
+              <object class="GtkButton" id="debug-button">
+                <property name="label">Set A Description</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="my-bonus-button">
+                <property name="label">Bonus Pomodoro</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>

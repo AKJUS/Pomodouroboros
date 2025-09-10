@@ -175,6 +175,19 @@ async def main(reactor: Any, app: Gtk.Application) -> None:
             bar, dayLoader, day, store, reactor
         )
 
+        bonus = builder.get_object("my-bonus-button")
+        assert isinstance(bonus, Gtk.Button), f"{bonus}"
+
+        def clickBonus(button: Gtk.Button) -> None:
+            print("clicked bonus")
+            from datetime import datetime
+            from dateutil.tz import tzlocal
+
+            day.bonusPomodoro(datetime.now(tzlocal()))
+            linuxPomObserver.refreshData()
+
+        bonus.connect("clicked", clickBonus)
+
         def updateUI(steps: int, scheduled: ScheduledCall) -> None:
             # TODO: refactor with
             # pomodouroboros.macos.old_mac_gui.DayManager.update to consider
