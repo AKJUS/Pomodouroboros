@@ -21,7 +21,7 @@ from twisted.internet.defer import Deferred
 
 from ..common import animatePct
 from ..pomcommon import poms2Dicts
-from ..pommodel import Break, Day, IntentionResponse, Interval, Pomodoro
+from ..pommodel import Break, Day, IntentionResponse, Interval, Pomodoro, IntentionResponse
 from ..storage import DayLoader
 from .gobj_utils import gSimpleProp, bindLabelColumns
 from .gtk_progress_bar import MultiBar
@@ -35,6 +35,7 @@ class LinuxPomObserver:
     day: Day
     store: Gio.ListStore
     reactor: Any
+    lastIntentionResponse: IntentionResponse | None = None
 
     def breakStarting(self, startingBreak: Break) -> None:
         """
@@ -109,6 +110,18 @@ class LinuxPomObserver:
         percentageElapsed% done.  canSetIntention tells you the likely outcome
         of setting the intention.
         """
+
+        if self.lastIntentionResponse != canSetIntention:
+            self.lastIntentionResponse = canSetIntention
+            match canSetIntention:
+                case IntentionResponse.CanBeSet:
+                    self.multiBar.setStyle("grace")
+                case IntentionResponse.AlreadySet:
+                    self.multiBar.setStyle("active")
+                case IntentionResponse.OnBreak:
+                    self.multiBar.setStyle("break")
+                case IntentionResponse.TooLate:
+                    self.multiBar.setStyle("prompt")
 
         async def _() -> None:
             await animatePct(
