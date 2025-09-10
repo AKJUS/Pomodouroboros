@@ -2,5 +2,5 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 0.96.1 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
-  <ui filename="linuxlegacypom.ui" sha256="6c38fe4e01fb483299a5f7170dfec0aa74e99fd9c803ecedb661c56d4c290690"/>
+  <ui filename="linuxlegacypom.ui" sha256="b06636c84c84bfb44f418696a5ee3416f0421c80bcc178e6c0d7727d73388c1a"/>
 </cambalache-project>
