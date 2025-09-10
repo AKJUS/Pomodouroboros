@@ -50,7 +50,7 @@ def makeOneProgressBar(
     ewmh: EWMH,
     cssClasses: list[str],
 ) -> tuple[Gtk.ProgressBar, Gtk.ApplicationWindow]:
-    win = Gtk.ApplicationWindow(application=app, title="Should Never Focus")
+    win = Gtk.ApplicationWindow(application=app, title="")
     win.set_opacity(0.25)
     win.set_decorated(False)
 
