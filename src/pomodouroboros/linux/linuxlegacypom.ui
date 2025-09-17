@@ -5,6 +5,7 @@
   <requires lib="gio" version="2.44"/>
   <requires lib="gtk" version="4.2"/>
   <object class="GtkWindow" id="my-window">
+    <property name="default-width">600</property>
     <child>
       <object class="GtkBox">
         <property name="orientation">vertical</property>
@@ -26,17 +27,37 @@
             <property name="propagate-natural-width">True</property>
             <child>
               <object class="GtkColumnView">
+                <property name="css-classes">data-table</property>
+                <property name="hexpand">True</property>
+                <property name="hexpand-set">True</property>
                 <property name="model">
-                  <object class="GtkSingleSelection" id="the-stort-model">
+                  <object class="GtkSingleSelection" id="the-store-model">
                     <property name="model">
                       <object class="GListStore" id="the-list-store"/>
                     </property>
                   </object>
                 </property>
+                <property name="overflow">visible</property>
+                <property name="reorderable">False</property>
+                <property name="vexpand">True</property>
+                <property name="width-request">0</property>
                 <child>
                   <object class="GtkColumnViewColumn">
                     <property name="factory">
                       <object class="GtkSignalListItemFactory" id="number-item-factory"/>
+                    </property>
+                    <property name="header-menu">
+                      <menu>
+                        <item>
+                          <attribute name="label">one</attribute>
+                        </item>
+                        <item>
+                          <attribute name="label">two</attribute>
+                        </item>
+                        <item>
+                          <attribute name="label">three</attribute>
+                        </item>
+                      </menu>
                     </property>
                     <property name="id">number</property>
                     <property name="title">#</property>
@@ -44,6 +65,7 @@
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn">
+                    <property name="expand">True</property>
                     <property name="factory">
                       <object class="GtkSignalListItemFactory" id="description-item-factory"/>
                     </property>

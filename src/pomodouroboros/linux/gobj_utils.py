@@ -23,7 +23,15 @@ def gSimpleProp[T](name: str, type: type[T], default: T | None = None) -> T:
     return setter  # type:ignore[return-value]
 
 
-def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
+# class SelectionManagingEditableLabel(Gtk.EditableLabel):
+#     pass
+
+
+def _bindOneAttribute(
+    name: str,
+    factory: Gtk.SignalListItemFactory,
+    selector: Gtk.SingleSelection,
+) -> None:
     print(f"binding attribute {name}")
 
     bindings = {}
@@ -32,7 +40,11 @@ def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
         itemFactory: Gtk.SignalListItemFactory, item: Gtk.ListItem
     ) -> None:
         print(f"setting up label for {name}")
-        label = Gtk.EditableLabel(halign=Gtk.Align.START)
+        label = Gtk.EditableLabel(
+            halign=Gtk.Align.START,
+            hexpand=True,
+            max_width_chars=10000,
+        )
         # label.set_selectable(False)
         item.set_child(label)
         print(f"finished setup for {name}")
@@ -47,7 +59,18 @@ def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
         itemsItem: Any = item.get_item()
         assert itemsItem is not None, "every item should be setup()"
         # TODO: let's have actual type information for canEditProperty
-        widget.set_editable(itemsItem.canEditProperty(name))
+        editable = itemsItem.canEditProperty(name)
+        widget.set_editable(editable)
+        widget.set_sensitive(editable)
+
+        def editstartstop(
+            label: Gtk.EditableLabel, param: GObject.ParamSpecBoolean
+        ) -> None:
+            pos = item.get_position()
+            if widget.get_editing():
+                selector.set_selected(pos)
+
+        widget.connect("notify::editing", editstartstop)
         # assert isinstance(
         #     itemsItem, PomItemModel
         # ), "should be added with store.insert"
@@ -81,6 +104,7 @@ def _bindOneAttribute(name: str, factory: Gtk.SignalListItemFactory) -> None:
 
 def bindLabelColumns(
     itemFactories: dict[str, Gtk.SignalListItemFactory],
+    selector: Gtk.SingleSelection,
 ) -> None:
     for attrName, listItemFactory in itemFactories.items():
-        _bindOneAttribute(attrName, listItemFactory)
+        _bindOneAttribute(attrName, listItemFactory, selector)

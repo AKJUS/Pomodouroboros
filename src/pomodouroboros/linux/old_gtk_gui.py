@@ -162,12 +162,15 @@ class PomItemModel(GObject.Object):
 
 def wireUpList(builder: Gtk.Builder) -> None:
 
+    selector = builder.get_object("the-store-model")
+    assert isinstance(selector, Gtk.SingleSelection)
+
     columnsToBind = {}
     for eachColName in ["number", "description", "start", "end", "success"]:
         itemFactory = builder.get_object(f"{eachColName}-item-factory")
         assert isinstance(itemFactory, Gtk.SignalListItemFactory)
         columnsToBind[eachColName] = itemFactory
-    bindLabelColumns(columnsToBind)
+    bindLabelColumns(columnsToBind, selector)
 
 
 async def main(reactor: Any, app: Gtk.Application) -> None:
