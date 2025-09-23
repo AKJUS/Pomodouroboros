@@ -58,11 +58,14 @@ if __name__ == "__main__":
         assert isinstance(descriptionItemFactory, Gtk.SignalListItemFactory)
         numberItemFactory = builder.get_object("number-item-factory")
         assert isinstance(numberItemFactory, Gtk.SignalListItemFactory)
+        selector = builder.get_object("the-store-model")
+        assert isinstance(selector, Gtk.SingleSelection)
         bindLabelColumns(
             {
                 "description": descriptionItemFactory,
                 "number": numberItemFactory,
-            }
+            },
+            selector,
         )
 
         loaded: object = builder.get_object("my-window")
