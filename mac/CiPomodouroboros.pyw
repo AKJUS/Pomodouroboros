@@ -1,4 +1,6 @@
-from unittest import main
+from twisted.scripts.trial import run
 
 if __name__ == "__main__":
-    main(module="pomodouroboros.macos.test.test_nib_init", verbosity=2)
+    from sys import argv
+    argv[1:] = "pomodouroboros.macos.test"
+    run()
