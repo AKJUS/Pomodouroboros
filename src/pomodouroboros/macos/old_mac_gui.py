@@ -298,6 +298,12 @@ class MacPomObserver(object):
         NSLog("refreshing after day over")
         self.refreshList()
 
+    def dayBreak(self) -> None:
+        self.active = False
+        self.progressController.hide()
+        NSLog("refreshing after day has gap in intervals")
+        self.refreshList()
+
 
 def expressIntention(
     clock: IReactorTime, day: Day, newIntention: str, dayLoader: DayLoader

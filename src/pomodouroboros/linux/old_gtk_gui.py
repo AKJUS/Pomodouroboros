@@ -145,6 +145,9 @@ class LinuxPomObserver:
         """
         self.multiBar.hide()
 
+    def dayBreak(self) -> None:
+        self.multiBar.hide()
+
 
 class PomItemModel(GObject.Object):
     __gtype_name__ = "PomItemModel"
