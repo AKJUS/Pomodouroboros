@@ -50,8 +50,14 @@ class DayProgressionTests(TestCase):
             clock=clock,
             dayLoader=dayLoader,
         )
-        afterFirst = beforeWork + timedelta(hours=4)
+        afterFirst = beforeWork + timedelta(hours=3, minutes=5)
         now = afterFirst.timestamp()
         clock.advance(now - clock.seconds())
         day.advanceToTime(clock.seconds(), observer)
+        self.assertEqual(observer.progressController.shouldBeVisible, True)
+        between = beforeWork + timedelta(hours=4)
+        now = between.timestamp()
+        clock.advance(now - clock.seconds())
+        day.advanceToTime(clock.seconds(), observer)
         self.assertEqual(observer.progressController.shouldBeVisible, False)
+
