@@ -37,7 +37,6 @@ from AppKit import (
     NSWindow,
 )
 from dateutil.relativedelta import relativedelta
-from dateutil.tz import tzlocal
 from Foundation import (
     NSDate,
     NSIndexSet,
@@ -366,10 +365,6 @@ def bonus(when: datetime, day: Day, dayLoader: DayLoader) -> None:
     except BaseException:
         # TODO: roll up error reporting into common event-handler
         print(Failure().getTraceback())
-
-
-def nowNative() -> datetime:
-    return datetime.now(tz=tzlocal())
 
 
 class MenuForwarder(NSResponder):
