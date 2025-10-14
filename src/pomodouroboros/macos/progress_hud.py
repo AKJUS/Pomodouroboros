@@ -1,3 +1,4 @@
+# -*- test-case-name: pomodouroboros.macos.test.test_day_progression -*-
 from __future__ import annotations
 
 import math
