@@ -1,3 +1,5 @@
+# -*- test-case-name: pomodouroboros.test.test_pommodel -*-
+
 """
 What do I want in here?
 
@@ -88,6 +90,12 @@ class PomObserver(Protocol):
     def dayOver(self) -> None:
         """
         The day is over, so there will be no more intervals.
+        """
+
+    def dayBreak(self) -> None:
+        """
+        The day is taking a break; there is a gap between pomodoro intervals,
+        and the overlay should be hidden.
         """
 
 
@@ -305,9 +313,9 @@ class Day(object):
     @classmethod
     def new(
         cls,
+        day: date = date.today(),
         startTimeOfDay: Optional[time] = None,
         endTimeOfDay: Optional[time] = None,
-        day: date = date.today(),
         timezone: tzinfo = tzlocal(),
         longBreaks: Optional[Sequence[int]] = None,
         pomodoroLength: timedelta = timedelta(minutes=25),
@@ -577,13 +585,10 @@ class Day(object):
                 breakLength = timedelta(minutes=5)
                 startingPoint = self.endTime
 
-
             for idx, anInterval in enumerate(self.pendingIntervals):
                 position = slice(idx, 0)
                 if anInterval.startTime > startingPoint:
-                    potentialEnd = (
-                        startingPoint + pomodoroLength + breakLength
-                    )
+                    potentialEnd = startingPoint + pomodoroLength + breakLength
                     if (
                         not anInterval.startTime
                         < potentialEnd
@@ -648,15 +653,15 @@ class Day(object):
             observer.dayOver()
             return
         currentInterval = self.pendingIntervals[0]
-        # No elapsed intervals means we've never sent the 'starting'
-        # notification, so do that now.
-        if (self.lastUpdateTimestamp <= currentInterval.startTimestamp) and (
-            currentTimestamp > currentInterval.startTimestamp
-        ):
-            if isinstance(currentInterval, Break):
-                observer.breakStarting(currentInterval)
-            elif isinstance(currentInterval, Pomodoro):
-                observer.pomodoroStarting(self, currentInterval)
+        if self.lastUpdateTimestamp < currentInterval.startTimestamp:
+            if currentTimestamp < currentInterval.startTimestamp:
+                # there is a gap
+                observer.dayBreak()
+            else:
+                if isinstance(currentInterval, Break):
+                    observer.breakStarting(currentInterval)
+                elif isinstance(currentInterval, Pomodoro):
+                    observer.pomodoroStarting(self, currentInterval)
 
         total = currentInterval.endTimestamp - currentInterval.startTimestamp
         elapsed = currentTimestamp - currentInterval.startTimestamp

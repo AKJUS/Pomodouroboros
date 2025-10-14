@@ -14,9 +14,9 @@ class DayTests(TestCase):
         Create a day and see how many poms it's got.
         """
         simpleDay = Day.new(
+            date(2021, 9, 1),
             time(9),
             time(17),
-            date(2021, 9, 1),
             timezone.utc,
             longBreaks=[5, 6],
         )

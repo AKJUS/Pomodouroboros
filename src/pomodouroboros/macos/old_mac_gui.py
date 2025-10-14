@@ -37,7 +37,6 @@ from AppKit import (
     NSWindow,
 )
 from dateutil.relativedelta import relativedelta
-from dateutil.tz import tzlocal
 from Foundation import (
     NSDate,
     NSIndexSet,
@@ -299,6 +298,12 @@ class MacPomObserver(object):
         NSLog("refreshing after day over")
         self.refreshList()
 
+    def dayBreak(self) -> None:
+        self.active = False
+        self.progressController.hide()
+        NSLog("refreshing after day has gap in intervals")
+        self.refreshList()
+
 
 def expressIntention(
     clock: IReactorTime, day: Day, newIntention: str, dayLoader: DayLoader
@@ -366,10 +371,6 @@ def bonus(when: datetime, day: Day, dayLoader: DayLoader) -> None:
     except BaseException:
         # TODO: roll up error reporting into common event-handler
         print(Failure().getTraceback())
-
-
-def nowNative() -> datetime:
-    return datetime.now(tz=tzlocal())
 
 
 class MenuForwarder(NSResponder):
