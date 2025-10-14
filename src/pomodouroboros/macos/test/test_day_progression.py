@@ -25,19 +25,20 @@ from ..progress_hud import PieTimer
 class DayProgressionTests(TestCase):
     def test_pom_observer(self) -> None:
         clock = Clock()
+        zone = ZoneInfo("US/Pacific")
         beforeWork = datetime(
             2025,
             1,
             10,
             6,
-            tzinfo=ZoneInfo("US/Pacific"),
+            tzinfo=zone,
         )
         clock.advance(beforeWork.timestamp())
         daysPath = FilePath(self.mktemp())
         daysPath.createDirectory()
 
         def newDay(date: Date) -> Day:
-            day = Day.new(date)
+            day = Day.new(date, timezone=zone)
             # clip out the middle to produce a gap
             del day.pendingIntervals[2:-2]
             return day
