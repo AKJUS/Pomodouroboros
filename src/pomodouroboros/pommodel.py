@@ -305,9 +305,9 @@ class Day(object):
     @classmethod
     def new(
         cls,
+        day: date = date.today(),
         startTimeOfDay: Optional[time] = None,
         endTimeOfDay: Optional[time] = None,
-        day: date = date.today(),
         timezone: tzinfo = tzlocal(),
         longBreaks: Optional[Sequence[int]] = None,
         pomodoroLength: timedelta = timedelta(minutes=25),

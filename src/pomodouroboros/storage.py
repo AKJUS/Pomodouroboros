@@ -3,7 +3,7 @@ from datetime import date as Date
 from os import environ
 from os.path import expanduser
 from pickle import dumps, loads
-from typing import Dict
+from typing import Callable, Dict
 
 from twisted.python.filepath import FilePath
 
@@ -18,11 +18,16 @@ defaultBaseLocation = FilePath(expanduser("~/.local/share/pomodouroboros"))
 if TEST_MODE:
     defaultBaseLocation = defaultBaseLocation.child("testing")
 
+def testingDay(date: Date) -> Day:
+    return Day.forTesting()
 
 @dataclass
 class DayLoader:
     baseLocation: FilePath = defaultBaseLocation
     cache: Dict[Date, Day] = field(default_factory=dict)
+    newDay: Callable[[Date], Day] = field(
+        default=testingDay if TEST_MODE else Day.new
+    )
 
     def pathForDate(self, date: Date) -> FilePath:
         childPath: FilePath = self.baseLocation.child(
@@ -46,12 +51,10 @@ class DayLoader:
             return self.cache[date]
 
         dayPath = self.pathForDate(date)
-        loadedOrCreated: Day = (
-            Day.forTesting()
-            if TEST_MODE
-            else loads(dayPath.getContent())
-            if dayPath.isfile()
-            else Day.new(day=date)
-        )
+        loadedOrCreated = None
+        if (not TEST_MODE) and dayPath.isfile():
+            loadedOrCreated = loads(dayPath.getContent())
+        if loadedOrCreated is None:
+            loadedOrCreated = self.newDay(date)
         self.cache[date] = loadedOrCreated
         return loadedOrCreated
