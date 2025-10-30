@@ -9,39 +9,41 @@ altgraph==0.17.4
     #   macholib
     #   modulegraph
     #   py2app
-anyio==4.10.0
+anyio==4.11.0
     # via httpx
 appdirs==1.4.4
     # via twisted
-attrs==25.3.0
+attrs==25.4.0
     # via
     #   hypothesis
     #   service-identity
     #   twisted
 automat==25.4.16
     # via twisted
-bcrypt==4.3.0
+bcrypt==5.0.0
     # via twisted
-certifi==2025.8.3
+certifi==2025.10.5
     # via
     #   httpcore
     #   httpx
-cffi==1.17.1
+cffi==2.0.0
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==45.0.6
+cryptography==46.0.3
     # via
     #   pyopenssl
     #   service-identity
     #   twisted
 cython-test-exception-raiser==1.0.2
     # via twisted
-datetype==2025.2.13
+datetype==2025.10.9
     # via
     #   Pomodouroboros (pyproject.toml)
     #   fritter
     #   quickmacapp
+ewmh==0.1.6
+    # via Pomodouroboros (pyproject.toml)
 fritter==0.0.9
     # via Pomodouroboros (pyproject.toml)
 h11==0.16.0
@@ -62,9 +64,9 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.138.3
+hypothesis==6.142.4
     # via twisted
-idna==3.10
+idna==3.11
     # via
     #   anyio
     #   httpx
@@ -80,7 +82,7 @@ packaging==25.0
     # via py2app
 priority==1.3.0
     # via twisted
-py2app==0.28.8 ; sys_platform == "darwin"
+py2app==0.28.8
     # via Pomodouroboros (pyproject.toml)
 pyasn1==0.6.1
     # via
@@ -88,11 +90,19 @@ pyasn1==0.6.1
     #   service-identity
 pyasn1-modules==0.4.2
     # via service-identity
-pycparser==2.22
+pycairo==1.28.0
+    # via
+    #   Pomodouroboros (pyproject.toml)
+    #   pygobject
+pycparser==2.23
     # via cffi
+pydbus==0.6.0
+    # via Pomodouroboros (pyproject.toml)
+pygobject==3.50.2
+    # via Pomodouroboros (pyproject.toml)
 pyhamcrest==2.1.0
     # via twisted
-pyobjc-core==11.1 ; sys_platform == "darwin"
+pyobjc-core==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   pyobjc-framework-cfnetwork
@@ -101,11 +111,11 @@ pyobjc-core==11.1 ; sys_platform == "darwin"
     #   pyobjc-framework-usernotifications
     #   quickmachotkey
     #   twisted
-pyobjc-framework-cfnetwork==11.1 ; sys_platform == "darwin"
+pyobjc-framework-cfnetwork==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   twisted
-pyobjc-framework-cocoa==11.1 ; sys_platform == "darwin"
+pyobjc-framework-cocoa==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   pyobjc-framework-cfnetwork
@@ -114,28 +124,34 @@ pyobjc-framework-cocoa==11.1 ; sys_platform == "darwin"
     #   quickmacapp
     #   quickmachotkey
     #   twisted
-pyobjc-framework-exceptionhandling==11.1 ; sys_platform == "darwin"
+pyobjc-framework-exceptionhandling==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   quickmacapp
-pyobjc-framework-usernotifications==11.1 ; sys_platform == "darwin"
+pyobjc-framework-usernotifications==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   quickmacapp
-pyopenssl==25.1.0
+pyopenssl==25.3.0
     # via twisted
 pyserial==3.5
     # via twisted
 python-dateutil==2.9.0.post0
     # via Pomodouroboros (pyproject.toml)
-quickmacapp==2025.7.22 ; sys_platform == "darwin"
+python-xlib==0.33
+    # via
+    #   Pomodouroboros (pyproject.toml)
+    #   ewmh
+quickmacapp==2025.7.22
     # via Pomodouroboros (pyproject.toml)
-quickmachotkey==2025.7.28 ; sys_platform == "darwin"
+quickmachotkey==2025.7.28
     # via Pomodouroboros (pyproject.toml)
 service-identity==24.2.0
     # via twisted
 six==1.17.0
-    # via python-dateutil
+    # via
+    #   python-dateutil
+    #   python-xlib
 sniffio==1.3.1
     # via anyio
 sortedcontainers==2.4.0
@@ -152,7 +168,7 @@ ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
 wsproto==1.2.0
     # via twisted
-zope-interface==7.2
+zope-interface==8.0.1
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
@@ -160,4 +176,3 @@ setuptools==80.9.0
     # via
     #   incremental
     #   modulegraph
-    #   zope-interface
