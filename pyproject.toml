@@ -1,23 +1,23 @@
 [build-system]
 requires = [
-  "setuptools>=42",
+    "setuptools>=42",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Pomodouroboros"
 authors=[
-  { name = "Glyph", email = "code@glyph.im" },
+    { name = "Glyph", email = "code@glyph.im" },
 ]
 description = "An extremely opinionated pomodoro system."
 readme = "README.md"
 dependencies = [
-  # core dependencies
-  "twisted[tls,http2]",
-  "python-dateutil",
-  "ulid-py",
-  "datetype",
-  "fritter",
+    # core dependencies
+    "twisted[tls,http2]",
+    "python-dateutil",
+    "ulid-py",
+    "datetype",
+    "fritter",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -27,32 +27,32 @@ version = "0.5.2"
 [project.optional-dependencies]
 
 gui = [
-  "py2app ; sys_platform == 'darwin'",
-  "pyobjc-core ; sys_platform == 'darwin'",
-  "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
-  "pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'",
-  "pyobjc-framework-UserNotifications ; sys_platform == 'darwin'",
-  "pyobjc-framework-CFNetwork ; sys_platform == 'darwin'",
-  "quickmacapp ; sys_platform == 'darwin'",
-  "quickmachotkey ; sys_platform == 'darwin'",
+    "py2app ; sys_platform == 'darwin'",
+    "pyobjc-core ; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
+    "pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'",
+    "pyobjc-framework-UserNotifications ; sys_platform == 'darwin'",
+    "pyobjc-framework-CFNetwork ; sys_platform == 'darwin'",
+    "quickmacapp ; sys_platform == 'darwin'",
+    "quickmachotkey ; sys_platform == 'darwin'",
 
-  "ewmh ; sys_platform == 'linux'",
-  "pycairo ; sys_platform == 'linux'",
-  # Pinning below 3.52 because it now needs libgirepository-2.0 which is not
-  # yet in standard debian/python docker images
-  "PyGObject<3.52 ; sys_platform == 'linux'",
-  "python-xlib ; sys_platform == 'linux'",
-  "pydbus ; sys_platform == 'linux'",
+    "ewmh ; sys_platform == 'linux'",
+    "pycairo ; sys_platform == 'linux'",
+    # Pinning below 3.52 because it now needs libgirepository-2.0 which is not
+    # yet in standard debian/python docker images
+    "PyGObject<3.52 ; sys_platform == 'linux'",
+    "python-xlib ; sys_platform == 'linux'",
+    "pydbus ; sys_platform == 'linux'",
 ]
 
 dev = [
-  "pip-tools",
-  "mypy",
-  "mypy-zope",
-  "types-python-dateutil",
-  "pygobject-stubs",
-  "types-python-xlib",
-  "encrust ; sys_platform == 'darwin'",
+    "pip-tools",
+    "mypy",
+    "mypy-zope",
+    "types-python-dateutil",
+    "pygobject-stubs",
+    "types-python-xlib",
+    "encrust ; sys_platform == 'darwin'",
 ]
 
 [project.urls]
@@ -71,6 +71,6 @@ line_length = 79
 [tool.ruff]
 
 ignore = [
-  "E731",
+    "E731",
 ]
 
