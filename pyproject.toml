@@ -46,6 +46,7 @@ gui = [
 ]
 
 dev = [
+    "pip < 25.3",           # https://github.com/jazzband/pip-tools/issues/2252
     "pip-tools",
     "mypy",
     "mypy-zope",
@@ -73,4 +74,3 @@ line_length = 79
 ignore = [
     "E731",
 ]
-
