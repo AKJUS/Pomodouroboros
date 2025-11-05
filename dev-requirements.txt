@@ -88,7 +88,7 @@ pyasn1-modules==0.4.2
     # via service-identity
 pycparser==2.23
     # via cffi
-pygobject-stubs==2.13.0
+pygobject-stubs==2.14.0
     # via Pomodouroboros (pyproject.toml)
 pyopenssl==25.3.0
     # via twisted
@@ -134,8 +134,10 @@ zope-schema==8.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==25.3
-    # via pip-tools
+pip==25.2
+    # via
+    #   Pomodouroboros (pyproject.toml)
+    #   pip-tools
 setuptools==80.9.0
     # via
     #   incremental
