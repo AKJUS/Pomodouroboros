@@ -64,7 +64,7 @@ tzdata==2025.2
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
-zope-interface==8.0.1
+zope-interface==8.1
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:

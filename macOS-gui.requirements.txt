@@ -63,7 +63,7 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.146.0
+hypothesis==6.147.0
     # via twisted
 idna==3.11
     # via
@@ -107,6 +107,7 @@ pyobjc-core==12.0
     #   pyobjc-framework-cfnetwork
     #   pyobjc-framework-cocoa
     #   pyobjc-framework-exceptionhandling
+    #   pyobjc-framework-servicemanagement
     #   pyobjc-framework-usernotifications
     #   quickmachotkey
     #   twisted
@@ -119,6 +120,7 @@ pyobjc-framework-cocoa==12.0
     #   Pomodouroboros (pyproject.toml)
     #   pyobjc-framework-cfnetwork
     #   pyobjc-framework-exceptionhandling
+    #   pyobjc-framework-servicemanagement
     #   pyobjc-framework-usernotifications
     #   quickmacapp
     #   quickmachotkey
@@ -127,6 +129,8 @@ pyobjc-framework-exceptionhandling==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   quickmacapp
+pyobjc-framework-servicemanagement==12.0
+    # via Pomodouroboros (pyproject.toml)
 pyobjc-framework-usernotifications==12.0
     # via
     #   Pomodouroboros (pyproject.toml)
@@ -167,7 +171,7 @@ ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
 wsproto==1.2.0
     # via twisted
-zope-interface==8.0.1
+zope-interface==8.1
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
