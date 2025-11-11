@@ -75,6 +75,9 @@ from .notifs import (
 )
 from .progress_hud import ProgressController
 
+# unused in Python, the class needs to exist for the nib to instantiate it
+from . import launch_at_login
+
 
 async def getSuccess(intention: Intention) -> IntentionSuccess | None:
     """

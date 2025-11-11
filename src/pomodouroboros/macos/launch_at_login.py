@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ServiceManagement import (
     SMAppService,
     SMAppServiceStatusEnabled,
@@ -16,9 +17,12 @@ from objc import IBAction, super
 
 class LoginLaunchObject(NSObject):
 
-    def init(self) -> None:
-        super().init()
+    def init(self) -> LoginLaunchObject:
+        NSLog("initializing login launch object")
+        result: LoginLaunchObject = super().init()
         self.myAppService = SMAppService.mainAppService()
+        NSLog("login launch object initialized")
+        return result
 
     def wantsToLaunchAtLogin(self) -> bool:
         return self.myAppService.status() in {
@@ -45,9 +49,11 @@ class LoginLaunchObject(NSObject):
             nowOn = didRegister
 
     def validateMenuItem_(self, item: NSMenuItem) -> bool:
+        NSLog("validating menu item...")
         item.setState_(
             NSControlStateValueOn
             if self.wantsToLaunchAtLogin()
             else NSControlStateValueOff
         )
+        NSLog("validated!")
         return True
