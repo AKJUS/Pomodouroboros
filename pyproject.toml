@@ -26,7 +26,12 @@ version = "0.5.3"
 
 [project.optional-dependencies]
 
-gui = [
+# Multiple separate 'GUI' environments to work around
+# https://github.com/jazzband/pip-tools#cross-environment-usage-of-requirementsinrequirementstxt-and-pip-compile
+
+# Possibly we should be using https://gitlab.com/mitchhentges/pip-compile-cross-platform instead
+
+macOS-gui = [
     "py2app ; sys_platform == 'darwin'",
     "pyobjc-core ; sys_platform == 'darwin'",
     "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
@@ -36,7 +41,9 @@ gui = [
     "pyobjc-framework-ServiceManagement ; sys_platform == 'darwin'",
     "quickmacapp ; sys_platform == 'darwin'",
     "quickmachotkey ; sys_platform == 'darwin'",
+]
 
+Linux-gui = [
     "ewmh ; sys_platform == 'linux'",
     "pycairo ; sys_platform == 'linux'",
     # Pinning below 3.52 because it now needs libgirepository-2.0 which is not

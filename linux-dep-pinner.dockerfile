@@ -1,4 +1,4 @@
-FROM python:3.13
+FROM python:3.14
 
 ENV DEBIAN_FRONTEND=noninteractive;
 RUN apt -qyy update;
@@ -13,4 +13,5 @@ RUN apt -qyy install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3
 
 
 RUN python3 -m venv /venv
-RUN /venv/bin/pip install pip-tools cryptography
+RUN /venv/bin/pip install --upgrade pip
+RUN /venv/bin/pip install --upgrade pip-tools cryptography
