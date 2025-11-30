@@ -47,7 +47,7 @@ gui = [
 ]
 
 dev = [
-    "pip < 25.3",           # https://github.com/jazzband/pip-tools/issues/2252
+    "pip",
     "pip-tools",
     "mypy",
     "mypy-zope",
