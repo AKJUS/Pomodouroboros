@@ -35,7 +35,7 @@ datetype==2025.10.9
     #   fritter
 delocate==0.13.0
     # via encrust
-encrust==2025.4.4.2
+encrust==2025.11.30
     # via Pomodouroboros (pyproject.toml)
 fritter==0.0.9
     # via Pomodouroboros (pyproject.toml)
