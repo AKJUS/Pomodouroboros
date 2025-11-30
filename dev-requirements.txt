@@ -87,6 +87,8 @@ pyasn1==0.6.1
     #   service-identity
 pyasn1-modules==0.4.2
     # via service-identity
+pycairo==1.29.0
+    # via Pomodouroboros (pyproject.toml)
 pycparser==2.23
     # via cffi
 pygobject-stubs==2.14.0

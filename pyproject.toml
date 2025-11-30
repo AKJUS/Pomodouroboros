@@ -60,6 +60,8 @@ dev = [
     "mypy-zope",
     "types-python-dateutil",
     "pygobject-stubs",
+    "pycairo",                  # pycairo doesn't have separate stubs, need the
+                                # actual pycairo for type checking
     "types-python-xlib",
     "encrust ; sys_platform == 'darwin'",
 ]
