@@ -54,7 +54,7 @@ jobs:
 
       - name: Test
         run: |
-          trial --rterrors --reporter=verbose -j auto pomodouroboros.model.test
+          PYTHONWARNINGS='default::DeprecationWarning' trial --rterrors --reporter=verbose -j auto pomodouroboros.model.test
 
       - name: Archive trial logs
         uses: actions/upload-artifact@v4
