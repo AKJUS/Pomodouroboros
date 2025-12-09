@@ -146,6 +146,12 @@ class Nexus:
         default_factory=lambda: ObservableList(IgnoreChanges)
     )
 
+    _promptForStartWhenIdleInSession: bool = True
+    """
+    If true, generate start prompts based on potential score loss (before end
+    of session) during active sessions.
+    """
+
     _lastUpdateTime: float = field(default=0.0)
 
     """
@@ -230,33 +236,15 @@ class Nexus:
         Create a deep copy of this L{Nexus}, detached from any user interface,
         to perform hypothetical model interactions.
         """
-        previouslyUpcoming = list(self._upcomingDurations)
-
-        def split() -> Iterator[Duration]:
-            return iter(previouslyUpcoming)
-
-        self._upcomingDurations = split()
         debug("constructing hypothetical")
-        hypothetical = deepcopy(
-            replace(
-                self,
-                _intentions=self._intentions[:],
-                _interfaceFactory=_noUIFactory,
-                _userInterface=_theNoUserInterface,
-                _upcomingDurations=split(),
-                _sessions=ObservableList(IgnoreChanges),
-                _previousStreaks=[each[:] for each in self._previousStreaks],
-                # TODO: the intervals in the current streak are mutable (if we
-                # evaluate the last one early, its end time changes) and thus
-                # potentially need to be cloned here; however, the
-                # idealized-evaluation logic should never do that, so this is
-                # more of an academic point
-                _currentStreak=self._currentStreak[:],
-            )
-        )
+        from .storage import nexusToJSON, nexusFromJSON
+        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory)
+        # Given that we are creating this hypothetical future to determine when
+        # to emit our next start prompt, configure it such that advancing its
+        # timeline will not recursively attempt to perform the same
+        # computation.
+        hypothetical._promptForStartWhenIdleInSession = False
         debug("constructed")
-        # because it's init=False we have to copy it manually
-        hypothetical._lastUpdateTime = self._lastUpdateTime
         return hypothetical
 
     def intervalsBetween(
@@ -444,17 +432,23 @@ class Nexus:
                     oldTime = self._lastUpdateTime
                     self._lastUpdateTime = newTime
                     debug("interval None, update to real time", newTime)
-                    activeSession = self._activeSession(oldTime, newTime)
-                    if activeSession is not None:
-                        scoreInfo = activeSession.idealScoreFor(self)
-                        nextDrop = scoreInfo.nextPointLoss
-                        if nextDrop is not None and nextDrop > newTime:
-                            newInterval = StartPrompt(
-                                self._lastUpdateTime,
-                                nextDrop,
-                                scoreInfo.scoreBeforeLoss(),
-                                scoreInfo.scoreAfterLoss(),
-                            )
+                    if self._promptForStartWhenIdleInSession:
+                        # If we are configured to prompt the user to get
+                        # started when they're in a session, then compute an
+                        # ideal score with which to prompt the user. (See
+                        # cloneWithoutUI for implementation notes.)
+
+                        activeSession = self._activeSession(oldTime, newTime)
+                        if activeSession is not None:
+                            scoreInfo = activeSession.idealScoreFor(self)
+                            nextDrop = scoreInfo.nextPointLoss
+                            if nextDrop is not None and nextDrop > newTime:
+                                newInterval = StartPrompt(
+                                    self._lastUpdateTime,
+                                    nextDrop,
+                                    scoreInfo.scoreBeforeLoss(),
+                                    scoreInfo.scoreAfterLoss(),
+                                )
                 case _:
                     if newTime >= currentInterval.endTime:
                         self._lastUpdateTime = currentInterval.endTime
@@ -603,13 +597,6 @@ class Nexus:
                 # and build that new interval.
                 self.advanceToTime(self._lastUpdateTime)
 
-    # NEW VERSION: LET'S DO THIS WITH CALLBACKS AND TIMERS RATHER THAN OUR OWN STATE
-
-    _nextEndTimer: ScheduledCall[float, Callable[[], None], int] | None = None
-    """
-    The timer for the action to take at the end of the next interval.
-    """
-
     _lastSessionCheck: float = 0.0
     """
     The time at which we last checked to see if we have a new automatic session
@@ -618,27 +605,6 @@ class Nexus:
     TODO: include me in the persistence, so we don't forget, or find some
     better timestamp to hang this logic on
     """
-
-    def tktktk_pomodoroEnded(self) -> None:
-        """
-        A pomodoro ended.
-        """
-
-    def tktktk_activePomodoroEvaluated(self) -> None:
-        """
-        The active pomodoro was evaluated, which means it's time to reschedule
-        the pomodoro-end timer to execute immediately.
-        """
-        assert (
-            self._nextEndTimer is not None
-        ), "there's gotta be a pomodoro active"
-        assert isinstance(
-            self._liveInterval, Pomodoro
-        ), "it's gotta be a pomodoro"
-        self._nextEndTimer.cancel()
-        self._nextEndTimer = None
-        self._liveInterval.endTime = self._scheduler.now()
-        self._proceedToNextInterval()
 
     def _nextSession(self, now: float) -> Session | None:
         """
@@ -649,71 +615,7 @@ class Nexus:
                 return session
         return None
 
-    def _proceedToNextInterval(self) -> None:
-        """
-        The current interval just ended, either by some interaction from a
-        user, or, from the passage of time going over that interval's endTime.
-        Determine what the next live should be, that starts now, and schedule a
-        timer that will run when it ends.
-        """
-        now = self._scheduler.now()
-        assert (
-            self._liveInterval.endTime <= self._scheduler.now()
-        ), "we should be running this because the interval has already expired or is expiring"
-        activeSession = self._activeSession(self._lastSessionCheck, now)
-        self._lastSessionCheck = now
-        newInterval: AnyIntervalOrIdle | None = None
 
-        # grace period or start prompt expiring; time for a new streak, the old
-        # streak ended.
-        if isinstance(self._liveInterval, (GracePeriod, StartPrompt)):
-            self._upcomingDurations = iter(())
-
-        if isinstance(self._liveInterval, (Break, Pomodoro)):
-            if (newDuration := next(self._upcomingDurations, None)) is not None:
-                newInterval = preludeIntervalMap[
-                    newDuration.intervalType
-                ](
-                    self._liveInterval.endTime,
-                    self._liveInterval.endTime + newDuration.seconds,
-                )
-                self._liveInterval = newInterval
-
-        # if any of these types of session are ending, that means we need
-        # to check to see if there's a session active to do another start
-        # prompt.
-
-        if newInterval is None:
-            # If we haven't figured out the new interval by this point, then we
-            # need to compute a start prompt.
-
-            if activeSession is not None:
-                scoreInfo = activeSession.idealScoreFor(self)
-                nextDrop = scoreInfo.nextPointLoss
-                if nextDrop is None or nextDrop <= now:
-                    # TODO: need a special case for this in the UI, since if
-                    # nextDrop is None, then scoreBeforeLoss() ==
-                    # scoreAfterLoss() and that will look weird.
-                    nextDrop = activeSession.end
-                newInterval = StartPrompt(
-                    self._lastUpdateTime,
-                    nextDrop,
-                    scoreInfo.scoreBeforeLoss(),
-                    scoreInfo.scoreAfterLoss(),
-                )
-            else:
-                # determine the end for the idle interval we are about to create
-                nextSession = self._nextSession(now)
-                # roughly the same as _newIdleInterval?
-                from math import inf
-
-                newInterval = Idle(
-                    now, nextSession.start if nextSession is not None else inf
-                )
-
-        self._scheduler.callAt(
-            self._liveInterval.endTime, self._intervalJustEnded
-        )
 
     def _intervalJustEnded(self) -> None:
         """

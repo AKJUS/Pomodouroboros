@@ -1,4 +1,4 @@
-# -*- test-case-name: pomodouroboros -*-
+# -*- test-case-name: pomodouroboros.model.test -*-
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from json import dump, load
 from math import inf
 from os import makedirs, replace
 from os.path import basename, dirname, exists, expanduser, join
-from typing import Callable, TypeAlias, cast
+from typing import Callable, Iterator, TypeAlias, cast
 from zoneinfo import ZoneInfo
 
 from datetype import Time, aware
@@ -176,6 +176,24 @@ def nexusFromJSON(
     return nexus
 
 
+def _copyUpcomingDurations(self: Nexus) -> list[Duration]:
+    """
+    C{_upcomingDurations} is an iterator, but sometimes we need to capture
+    it for serialization; exhaust the iterator into a new list, make a new
+    iterator of the new list, put the new iterator of the new list back and
+    then return a copy of the list that was created.
+
+    This is needed for serialization.
+    """
+    previouslyUpcoming = list(self._upcomingDurations)
+
+    def split() -> Iterator[Duration]:
+        return iter(previouslyUpcoming)
+
+    self._upcomingDurations = split()
+    return previouslyUpcoming[:]
+
+
 def nexusToJSON(nexus: Nexus) -> SavedNexus:
     @singledispatch
     def saveInterval(interval: AnyStreakInterval) -> SavedInterval:
@@ -253,7 +271,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
             }
             # TODO: slightly inefficient, don't clone the whole thing just to
             # clone the iterator
-            for duration in nexus.cloneWithoutUI()._upcomingDurations
+            for duration in _copyUpcomingDurations(nexus)
         ],
         "currentStreak": [
             saveInterval(streakInterval)
