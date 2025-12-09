@@ -170,6 +170,8 @@ class ActiveSessionManager:
         """
         Something has changed; reschedule all the scheduled stuff.
         """
+        # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
+        # state will be corrupted
         for sched in self._everythingScheduled:
             sched.cancel()
         for rule in self.rules:
@@ -180,6 +182,9 @@ class ActiveSessionManager:
                     self._beginSessionWithRule(rule),
                 )
             )
+
+    # Implementation of observer protocol, for watching changes to the list of
+    # L{SessionRule} objects in C{self.rules}
 
     @contextmanager
     def added(self, key: object, new: object) -> Iterator[None]:
@@ -198,6 +203,8 @@ class ActiveSessionManager:
 
     def child(self, key: object) -> Changes[object, object]:
         return IgnoreChanges
+
+    # End observer protocol
 
     @classmethod
     def new(
