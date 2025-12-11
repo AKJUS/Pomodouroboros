@@ -666,7 +666,9 @@ def _canSetObserver(
     maybeObservable: object,
 ) -> Callable[[Changes[Any, Any]], None] | None:
     """
-    determine if the given instance is a real observer
+    Determine if the given C{maybeObservable} is an C{@}L{observable} object;
+    if it is, return a function that can set its observer (which takes a
+    L{Changes} and returns C{None}).  If it is not observable, return C{None}.
     """
     observerName = getattr(maybeObservable, _observabilityHint, None)
     if observerName is None:
