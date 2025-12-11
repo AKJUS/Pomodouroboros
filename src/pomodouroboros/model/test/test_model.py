@@ -412,7 +412,7 @@ class NexusTests(TestCase):
             time(hour=4 + 12, minute=45, tzinfo=TZ),
             ZoneInfo,
         )
-        self.nexus._sessionRules.append(
+        self.nexus._sessionManager.rules.append(
             DailySessionRule(
                 dailyStart,
                 dailyEnd,
@@ -772,7 +772,7 @@ class NexusTests(TestCase):
         dailyStart = aware(time(9, tzinfo=TZ), ZoneInfo)
         dailyEnd = aware(time(5, tzinfo=TZ), ZoneInfo)
         # TODO: replace this with L{ActiveSessionManager.rules}
-        self.nexus._sessionRules.append(
+        self.nexus._sessionManager.rules.append(
             DailySessionRule(
                 dailyStart=dailyStart,
                 dailyEnd=dailyEnd,
@@ -780,8 +780,8 @@ class NexusTests(TestCase):
             )
         )
         self.assertEqual(
-            self.nexus._sessionRules,
-            nexusFromJSON(nexusToJSON(self.nexus), _noUIFactory)._sessionRules,
+            self.nexus._sessionManager.rules,
+            nexusFromJSON(nexusToJSON(self.nexus), _noUIFactory)._sessionManager.rules,
         )
 
     def test_achievedEarly(self) -> None:

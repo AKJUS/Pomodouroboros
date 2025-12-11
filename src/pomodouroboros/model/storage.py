@@ -42,7 +42,7 @@ from .schema import (
     SavedPomodoro,
     SavedStartPrompt,
 )
-from .sessions import Session
+from .sessions import ActiveSessionManager, Session
 
 
 def nexusFromJSON(
@@ -140,6 +140,21 @@ def nexusFromJSON(
         driver := MemoryDriver()
     )
     driver.advance(lastUpdateTime)
+    sessionRules = ObservableList(
+        IgnoreChanges,
+        [loadRule(rule) for rule in saved.get("sessionRules", [])],
+    )
+    sessions = ObservableList(
+        IgnoreChanges,
+        [
+            Session(
+                start=each["start"],
+                end=each["end"],
+                automatic=bool(each.get("automatic")),
+            )
+            for each in saved["sessions"]
+        ],
+    )
     nexus = Nexus(
         scheduler,
         driver,
@@ -155,24 +170,12 @@ def nexusFromJSON(
         ),
         _previousStreaks=previousStreaks,
         _currentStreak=currentStreak,
-        _sessions=ObservableList(
-            IgnoreChanges,
-            [
-                Session(
-                    start=each["start"],
-                    end=each["end"],
-                    automatic=bool(each.get("automatic")),
-                )
-                for each in saved["sessions"]
-            ],
-        ),
+        _sessions=sessions,
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
         _liveInterval=Idle(0, inf),
-        _sessionRules=[
-            loadRule(rule) for rule in saved.get("sessionRules", [])
-        ],
     )
+    nexus._sessionManager.rules = sessionRules
     return nexus
 
 
@@ -304,7 +307,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
                 },
                 "days": [day.value for day in rule.days],
             }
-            for rule in nexus._sessionRules
+            for rule in nexus._sessionManager.rules
         ],
     }
 

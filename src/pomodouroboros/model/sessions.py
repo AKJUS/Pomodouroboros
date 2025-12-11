@@ -125,7 +125,7 @@ class DailySessionRule:
 class ActiveSessionManager:
     activeSession: Session | None
     observer: Observer
-    rules: ObservableList[SessionRule]
+    rules: ObservableList[DailySessionRule]
     _scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
     _everythingScheduled: list[Cancellable]
     _async: Async
@@ -212,10 +212,34 @@ class ActiveSessionManager:
         observer: Observer,
         scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int],
     ) -> ActiveSessionManager:
-        rules: ObservableList[SessionRule] = ObservableList(IgnoreChanges)
+        rules: ObservableList[DailySessionRule] = ObservableList(IgnoreChanges)
         self = cls(
             None, observer, rules, scheduler, [], Async(TwistedAsyncDriver())
         )
         rules.observer = self
         self._reschedule()
         return self
+
+
+@dataclass
+class AddActiveSessions:
+    sessions: ObservableList[Session]
+
+    @contextmanager
+    def added(self, key: str, new: object) -> Iterator[None]:
+        with self.changed(key, None, new):
+            yield
+
+    @contextmanager
+    def removed(self, key: str, old: object) -> Iterator[None]:
+        yield
+
+    @contextmanager
+    def changed(self, key: str, old: object, new: object) -> Iterator[None]:
+        yield
+        if key == "activeSession":
+            assert isinstance(new, Session)
+            self.sessions.append(new)
+
+    def child(self, key: object) -> Changes[object, object]:
+        return IgnoreChanges
