@@ -134,16 +134,36 @@ from typing import (
     TypeVar,
     dataclass_transform,
     overload,
+    TYPE_CHECKING,
 )
 from weakref import proxy
 
+
+__all__ = [
+    "observable",
+    "Changes",
+    "IgnoreChanges",
+    "DebugChanges",
+    "addObserver",
+    "removeObserver",
+    "ObservableDictionary",
+    "ObservableList",
+    "MirrorMapping",
+    "MirrorSequence",
+    "MirrorObject",
+    "MustSpecifyObserver",
+    "PathObserver",
+    "AfterInitObserver",
+    "build",
+]
+
 K = TypeVar("K")
 V = TypeVar("V")
-
-
 Kcon = TypeVar("Kcon", contravariant=True)
 Vcon = TypeVar("Vcon", contravariant=True)
 Scon = TypeVar("Scon", contravariant=True)
+Ty = TypeVar("Ty", bound=type)
+_observabilityHint = "__observable_observer__"
 
 
 class Changes(Protocol[Kcon, Vcon]):
@@ -218,10 +238,6 @@ class IgnoreChanges:
         return cls
 
 
-_IgnoreChangesImplements: type[Changes[object, object]] = IgnoreChanges
-_IgnoreChangesImplementsClass: Changes[object, object] = IgnoreChanges
-
-
 @dataclass
 class DebugChanges(Generic[Kcon, Vcon]):
     original: Changes[Kcon, Vcon] = IgnoreChanges
@@ -257,10 +273,87 @@ class DebugChanges(Generic[Kcon, Vcon]):
         )
 
 
-_DebugChangesImplements: type[Changes[object, object]] = DebugChanges
+@dataclass
+class _MultiChanges(Generic[Kcon, Vcon]):
+    left: Changes[Kcon, Vcon]
+    right: Changes[Kcon, Vcon]
 
-_ObjectObserverBound = Changes[str, object]
-_O = TypeVar("_O", bound=_ObjectObserverBound)
+    @contextmanager
+    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+        """
+        C{value} was added for the given C{key}.
+        """
+        with self.left.added(key, new):
+            with self.right.added(key, new):
+                yield
+
+    @contextmanager
+    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+        """
+        C{key} was removed for the given C{key}.
+        """
+        with self.left.removed(key, old):
+            with self.right.removed(key, old):
+                yield
+
+    @contextmanager
+    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+        """
+        C{value} was changed from C{old} to C{new} for the given C{key}.
+        """
+        with self.left.changed(key, old, new):
+            with self.right.changed(key, old, new):
+                yield
+
+    def child(self, key: Kcon) -> Changes[Any, Any]:
+        """
+        Provide a L{Changes} for observing changes to the sub-object at C{key}.
+
+        @note: the type signature here is loose because the structure of C{key}
+            will often imply a specific type; for example, if you have an
+            attribute C{values: }L{ObservableList}C{[float]}, then
+            C{observer.child("values")} ought to be able to return a
+            C{Changes[int,float]} without complaint from the type system.
+        """
+        return _MultiChanges(self.left.child(key), self.right.child(key))
+
+    def withRemoved(self, other: Changes[Any, Any]) -> Changes[Kcon, Vcon]:
+        if self.left is other:
+            return self.right
+        elif self.right is other:
+            return self.left
+        elif self is other:
+            return IgnoreChanges
+        else:
+            return self
+
+
+def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
+    """
+    Add the given observer to the observable.
+    """
+    prop = _ObserverProperty.of(observable)
+    if prop is None:
+        raise TypeError(f"{observable} is not @observable")
+    old = prop.get()
+    if not (old is IgnoreChanges or isinstance(old, IgnoreChanges)):
+        newObserver = _MultiChanges(old, observer)
+    prop.set(newObserver)
+
+
+def removeObserver(observable: object, observer: Changes[Any, Any]) -> None:
+    """
+    Set the observer of the given observable to an observer that does not
+    include the given observer.
+    """
+    prop = _ObserverProperty.of(observable)
+    if prop is None:
+        raise TypeError(f"{observable} is not @observable")
+    old = prop.get()
+    if old is observer:
+        prop.set(IgnoreChanges)
+    elif isinstance(old, _MultiChanges):
+        prop.set(old.withRemoved(observer))
 
 
 class ObserverAnnotation(Enum):
@@ -276,15 +369,21 @@ class ObserverAnnotation(Enum):
     "Annotation value indicating that this attribute is the observer attribute."
 
 
+_ObjectObserverBound = Changes[str, object]
+_O = TypeVar("_O", bound=_ObjectObserverBound)
+CN = TypeVar("CN", bound=Changes[Any, Any])
 ObserverAttribute = Annotated[_O, ObserverAnnotation.attribute]
 _AnnotatedType = type(ObserverAttribute)
 Observer = ObserverAttribute[_ObjectObserverBound]
-
 SequenceObserver = Changes[int | slice, V | Iterable[V]]
 
 
 @dataclass(eq=False, order=False)
 class ObservableDict(MutableMapping[K, V]):
+    """
+    An observable mutable mapping.
+    """
+
     observer: Changes[K, V]
     _storage: MutableMapping[K, V] = field(default_factory=dict)
     __observable_observer__: ClassVar[str] = "observer"
@@ -324,6 +423,10 @@ class ObservableDict(MutableMapping[K, V]):
 @total_ordering
 @dataclass(repr=False, eq=False, order=False)
 class ObservableList(MutableSequence[V]):
+    """
+    An observable mutable sequence.
+    """
+
     observer: SequenceObserver[V]
     _storage: MutableSequence[V] = field(default_factory=list)
     __observable_observer__: ClassVar[str] = "observer"
@@ -446,9 +549,6 @@ class MirrorMapping(Generic[K, V]):
         return IgnoreChanges
 
 
-_MirrorMappingImplements: type[Changes[str, float]] = MirrorMapping[str, float]
-
-
 @dataclass
 class MirrorSequence(Generic[V]):
     """
@@ -504,9 +604,6 @@ class MirrorSequence(Generic[V]):
         return IgnoreChanges
 
 
-_MirrorSequenceImplements: type[SequenceObserver[str]] = MirrorSequence[str]
-
-
 @dataclass
 class MirrorObject:
     """
@@ -550,9 +647,6 @@ class MirrorObject:
         return IgnoreChanges
 
 
-_MirrorObjectImplements: type[Changes[str, object]] = MirrorObject
-
-
 @dataclass
 class _ObservableProperty:
     """
@@ -562,40 +656,38 @@ class _ObservableProperty:
     observers.
     """
 
-    observer_name: str
-    field_name: str
+    observerName: str
+    fieldName: str
 
     def __get__(self, instance: object, owner: object) -> object:
-        if self.field_name not in instance.__dict__:
-            raise AttributeError(f"couldn't find {self.field_name!r}")
-        return instance.__dict__[self.field_name]
+        if self.fieldName not in instance.__dict__:
+            raise AttributeError(f"couldn't find {self.fieldName!r}")
+        return instance.__dict__[self.fieldName]
 
     def __set__(self, instance: object, value: object) -> None:
-        notify: Changes[str, object] = getattr(instance, self.observer_name)
+        notify: Changes[str, object] = getattr(instance, self.observerName)
 
         # I need to avoid invoking the observer if the instance isn't fully
         # initialized
         with (
             notify.changed(
-                self.field_name, instance.__dict__[self.field_name], value
+                self.fieldName, instance.__dict__[self.fieldName], value
             )
-            if self.field_name in instance.__dict__
-            else notify.added(self.field_name, value)
+            if self.fieldName in instance.__dict__
+            else notify.added(self.fieldName, value)
         ):
-            observerSetter = _canSetObserver(value)
-            instance.__dict__[self.field_name] = value
-            if observerSetter is not None:
-                c = notify.child(self.field_name)
-                observerSetter(c)
+            observerProp = _ObserverProperty.of(value)
+            instance.__dict__[self.fieldName] = value
+            if observerProp is not None:
+                c = notify.child(self.fieldName)
+                observerProp.set(c)
 
     def __delete__(self, instance: object) -> None:
-        if self.field_name not in instance.__dict__:
-            raise AttributeError(f"couldn't find {self.field_name!r}")
-        notify: Changes[str, object] = getattr(instance, self.observer_name)
-        with notify.removed(
-            self.field_name, instance.__dict__[self.field_name]
-        ):
-            del instance.__dict__[self.field_name]
+        if self.fieldName not in instance.__dict__:
+            raise AttributeError(f"couldn't find {self.fieldName!r}")
+        notify: Changes[str, object] = getattr(instance, self.observerName)
+        with notify.removed(self.fieldName, instance.__dict__[self.fieldName]):
+            del instance.__dict__[self.fieldName]
 
 
 def _unstringify(cls: type, annotation: object) -> object:
@@ -630,9 +722,6 @@ def _isObserver(annotation: object) -> bool:
     return False
 
 
-Ty = TypeVar("Ty", bound=type)
-
-
 class MustSpecifyObserver(Exception):
     """
     You must annotate exactly one attribute with Observer when declaring a
@@ -659,25 +748,30 @@ def _shouldBeObservable(
     )
 
 
-_observabilityHint = "__observable_observer__"
-
-
-def _canSetObserver(
-    maybeObservable: object,
-) -> Callable[[Changes[Any, Any]], None] | None:
+@dataclass
+class _ObserverProperty:
     """
-    Determine if the given C{maybeObservable} is an C{@}L{observable} object;
-    if it is, return a function that can set its observer (which takes a
-    L{Changes} and returns C{None}).  If it is not observable, return C{None}.
+    A reification of the observer property.  Construct with
+    L{_ObserverProperty.of}C{(x)} where C{x} is a potentially observable
+    object.
     """
-    observerName = getattr(maybeObservable, _observabilityHint, None)
-    if observerName is None:
-        return None
 
-    def _setObserver(anObserver: Changes[Any, Any]) -> None:
-        setattr(maybeObservable, observerName, anObserver)
+    observable: object
+    _name: str
 
-    return _setObserver
+    def get(self) -> Changes[Any, Any]:
+        observer: Changes[Any, Any] = getattr(self.observable, self._name)
+        return observer
+
+    def set(self, observer: Changes[Any, Any]) -> None:
+        setattr(self.observable, self._name, observer)
+
+    @classmethod
+    def of(cls, maybeObservable: object) -> _ObserverProperty | None:
+        observerName = getattr(maybeObservable, _observabilityHint, None)
+        if observerName is None:
+            return None
+        return _ObserverProperty(maybeObservable, observerName)
 
 
 @dataclass_transform(field_specifiers=(field,))
@@ -722,68 +816,6 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
         return cls
 
     return make_observable
-
-
-@dataclass
-class DispatchingObserver(Generic[Kcon, Vcon]):
-    _adders: dict[
-        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
-    ]
-    _removers: dict[
-        Kcon, tuple[list[Callable[[Vcon], None]], list[Callable[[Vcon], None]]]
-    ]
-    _changers: dict[
-        Kcon,
-        tuple[
-            list[Callable[[Vcon, Vcon], None]],
-            list[Callable[[Vcon, Vcon], None]],
-        ],
-    ]
-
-    def beforeAdd(self, key: Kcon) -> None:
-        pass
-
-    def afterAdd(self, key: Kcon) -> None:
-        pass
-
-    def beforeRemove(self, key: Kcon) -> None:
-        pass
-
-    def afterRemove(self, key: Kcon) -> None:
-        pass
-
-    def beforeChange(self, key: Kcon) -> None:
-        pass
-
-    def afterChange(self, key: Kcon) -> None:
-        pass
-
-    @contextmanager
-    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
-        before, after = self._adders.get(key, ([], []))
-        for each in before:
-            each(new)
-        yield
-        for each in after:
-            each(new)
-
-    @contextmanager
-    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
-        before, after = self._removers.get(key, ([], []))
-        for each in before:
-            each(old)
-        yield
-        for each in after:
-            each(old)
-
-    @contextmanager
-    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
-        before, after = self._changers.get(key, ([], []))
-        for each in before:
-            each(old, new)
-        yield
-        for each in after:
-            each(old, new)
 
 
 @dataclass(repr=False)
@@ -948,11 +980,6 @@ class AfterInitObserver:
             # TODO: clean up
 
 
-_AfterInitObserver: type[Changes[object, object]] = AfterInitObserver
-
-CN = TypeVar("CN", bound=Changes[Any, Any])
-
-
 def build(
     observed: Callable[[Changes[object, object]], V],
     observer: Callable[[V], CN],
@@ -975,3 +1002,22 @@ def build(
     )
     interpose._setOriginal(o)
     return observable, o
+
+
+if TYPE_CHECKING:
+    # Ask type-checker to eagerly verify our expectations of various objects
+    # we've declared.
+    _IgnoreChangesImplements: type[Changes[object, object]] = IgnoreChanges
+    _IgnoreChangesImplementsClass: Changes[object, object] = IgnoreChanges
+    _MultiChangesImplements: type[Changes[int, str]] = _MultiChanges[int, str]
+    _DebugChangesImplements: type[Changes[object, object]] = DebugChanges
+    _MirrorMappingImplements: type[Changes[str, float]] = MirrorMapping[
+        str, float
+    ]
+    _MirrorSequenceImplements: type[SequenceObserver[str]] = MirrorSequence[
+        str
+    ]
+    _MirrorObjectImplements: type[Changes[str, object]] = MirrorObject
+    _AfterInitObserverImplements: type[Changes[object, object]] = (
+        AfterInitObserver
+    )
