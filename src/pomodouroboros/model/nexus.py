@@ -123,16 +123,8 @@ class Nexus:
     """
 
     def __post_init__(self) -> None:
-        dateScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
-        dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(
-            guessLocalZone()
-        )
-        branchManager: BranchManager
-        branchManager, dateScheduler = branch(
-            self._scheduler,
-            dateScale,
-        )
-        self._sessionManager = SessionManager.new(dateScheduler)
+        if self._sessionManager is None:
+            self._sessionManager = SessionManager.new(IgnoreChanges, self._scheduler)
 
     _intentions: MutableSequence[Intention] = field(
         default_factory=lambda: ObservableList(IgnoreChanges)

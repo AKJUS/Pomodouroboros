@@ -331,7 +331,7 @@ def synthesizeRuleWhenSet(
                    this should at least do something
             """
             newRule = self.synthesizeRule()
-            self.nexus._sessionRules[:1] = [newRule]
+            self.nexus._sessionManager.rules[:1] = [newRule]
 
     return aSetter
 
@@ -388,8 +388,8 @@ class AutoStreakRuleValues(NSObject):
     # Methods!
     def awakeWithNexus_(self, nexus: Nexus) -> None:
         self.nexus = nexus
-        if self.nexus._sessionRules:
-            self.absorbRule_(self.nexus._sessionRules[0])
+        if self.nexus._sessionManager.rules:
+            self.absorbRule_(self.nexus._sessionManager.rules[0])
         for attribute in self._relevantAttributes:
             if getattr(self, attribute) is None:
                 self.absorbRule_(defaultRule)
