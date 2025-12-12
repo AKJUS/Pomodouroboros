@@ -771,7 +771,7 @@ class NexusTests(TestCase):
         """
         dailyStart = aware(time(9, tzinfo=TZ), ZoneInfo)
         dailyEnd = aware(time(5, tzinfo=TZ), ZoneInfo)
-        # TODO: replace this with L{ActiveSessionManager.rules}
+        # TODO: replace this with L{SessionManager.rules}
         self.nexus._sessionManager.rules.append(
             DailySessionRule(
                 dailyStart=dailyStart,

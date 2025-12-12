@@ -318,14 +318,31 @@ class _MultiChanges(Generic[Kcon, Vcon]):
         return _MultiChanges(self.left.child(key), self.right.child(key))
 
     def withRemoved(self, other: Changes[Any, Any]) -> Changes[Kcon, Vcon]:
-        if self.left is other:
+        """
+        Create a L{Changes} without L{other} anywheree in its hierarchy.
+        """
+        if self.left == other:
             return self.right
-        elif self.right is other:
+        elif self.right == other:
             return self.left
-        elif self is other:
+        elif self == other:
             return IgnoreChanges
-        else:
-            return self
+
+        newLeft = (
+            self.left.withRemoved(other)
+            if isinstance(self.left, _MultiChanges)
+            else self.left
+        )
+        newRight = (
+            self.right.withRemoved(other)
+            if isinstance(self.right, _MultiChanges)
+            else self.right
+        )
+        if newLeft is IgnoreChanges or isinstance(newLeft, IgnoreChanges):
+            return newRight
+        if newRight is IgnoreChanges or isinstance(newLeft, IgnoreChanges):
+            return newLeft
+        return _MultiChanges(newLeft, newRight)
 
 
 def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
@@ -339,6 +356,12 @@ def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
     if not (old is IgnoreChanges or isinstance(old, IgnoreChanges)):
         newObserver = _MultiChanges(old, observer)
     prop.set(newObserver)
+    # okay now we need to descend down the observables hierarchy
+    for k, v in observable.__class__.__dict__.items():
+        subservable = getattr(observable, k, None)
+        subprop = _ObserverProperty.of(subservable)
+        if subprop is not None:
+            addObserver(subservable, observer.child(k))
 
 
 def removeObserver(observable: object, observer: Changes[Any, Any]) -> None:
@@ -354,6 +377,12 @@ def removeObserver(observable: object, observer: Changes[Any, Any]) -> None:
         prop.set(IgnoreChanges)
     elif isinstance(old, _MultiChanges):
         prop.set(old.withRemoved(observer))
+
+    for k, v in observable.__class__.__dict__.items():
+        subservable = getattr(observable, k, None)
+        subprop = _ObserverProperty.of(subservable)
+        if subprop is not None:
+            removeObserver(subservable, observer.child(k))
 
 
 class ObserverAnnotation(Enum):

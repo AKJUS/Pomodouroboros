@@ -10,9 +10,9 @@ from fritter.drivers.datetimes import DateTimeDriver
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
 
-from pomodouroboros.model.observables import Changes
+from pomodouroboros.model.observables import Changes, addObserver, DebugChanges
 
-from ..sessions import ActiveSessionManager, DailySessionRule, Session, Weekday
+from ..sessions import SessionManager, DailySessionRule, Session, Weekday
 
 PT = ZoneInfo("America/Los_Angeles")
 
@@ -25,10 +25,8 @@ testingRule = DailySessionRule(
 
 class SessionStartEndSchedulingTests(TestCase):
     def test_observeScheduledSession(self) -> None:
-        dateScheduler: Scheduler[
-            DateTime[ZoneInfo], Callable[[], None], int
-        ] = schedulerFromDriver(
-            DateTimeDriver(memory := MemoryDriver(), zone=PT)
+        scheduler: Scheduler[float, Callable[[], None], int] = (
+            schedulerFromDriver(memory := MemoryDriver())
         )
         desiredStart = aware(
             datetime(2023, 11, 7, 3, 4, 5, tzinfo=PT), ZoneInfo
@@ -65,7 +63,9 @@ class SessionStartEndSchedulingTests(TestCase):
             def child(self, key: object) -> Changes[Any, Any]:
                 return self
 
-        asm = ActiveSessionManager.new(Observe(), dateScheduler)
+        asm = SessionManager.new(Observe(), scheduler)
+        if 0:
+            addObserver(asm, DebugChanges())
         asm.rules.append(testingRule)
         self.assertIs(asm.activeSession, None)
         memory.advance(desiredStart + 10 - memory.now())
@@ -96,15 +96,13 @@ class SessionStartEndSchedulingTests(TestCase):
             ),
             days={Weekday.tuesday, Weekday.wednesday, Weekday.friday},
         )
-        self.assertEqual(
+        self.assertIn(
+            (
+                "add",
+                "rules",
+                [expectedRule],
+            ),
             extraneousChanges,
-            [
-                (
-                    "add",
-                    "rules",
-                    [expectedRule],
-                )
-            ],
         )
 
 

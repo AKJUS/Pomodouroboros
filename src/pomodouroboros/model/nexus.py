@@ -40,10 +40,9 @@ from .intervals import (
 )
 from .observables import Changes, IgnoreChanges, ObservableList
 from .sessions import (
-    ActiveSessionManager,
+    SessionManager,
     DailySessionRule,
     Session,
-    AddActiveSessions,
 )
 
 
@@ -118,7 +117,7 @@ class Nexus:
     while implementing so as to avoid confusion
     """
 
-    _sessionManager: ActiveSessionManager = None  # type:ignore
+    _sessionManager: SessionManager = None  # type:ignore
     """
     The manager of and creator of session objects.
     """
@@ -133,9 +132,7 @@ class Nexus:
             self._scheduler,
             dateScale,
         )
-        self._sessionManager = ActiveSessionManager.new(
-            AddActiveSessions(self._sessions), dateScheduler
-        )
+        self._sessionManager = SessionManager.new(dateScheduler)
 
     _intentions: MutableSequence[Intention] = field(
         default_factory=lambda: ObservableList(IgnoreChanges)

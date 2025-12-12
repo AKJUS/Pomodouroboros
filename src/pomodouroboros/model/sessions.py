@@ -16,10 +16,18 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, Time
-from fritter.boundaries import Cancellable, Day, ScheduledCall, Scheduler
+from fritter.boundaries import (
+    Cancellable,
+    Day,
+    RepeatingWork,
+    ScheduledCall,
+    Scheduler,
+)
+from fritter.drivers.datetimes import DateScale, guessLocalZone
 from fritter.drivers.twisted import TwistedAsyncDriver
-from fritter.repeat import Async
+from fritter.repeat import repeatedly
 from fritter.repeat.rules.datetimes import EachDTRule, EachWeekOn
+from fritter.tree import Scale, branch
 from twisted.internet.defer import Deferred
 
 from pomodouroboros.model.observables import (
@@ -28,6 +36,7 @@ from pomodouroboros.model.observables import (
     ObservableList,
     Observer,
     observable,
+    addObserver,
 )
 
 if TYPE_CHECKING:
@@ -121,21 +130,42 @@ class DailySessionRule:
         )
 
 
+@dataclass
+class StatefulCancel:
+    """
+    a canceller that holds another canceller and updates it, canceling it when
+    cancelled
+    """
+
+    _state: Cancellable | None = None
+
+    def cancel(self) -> None:
+        state = self._state
+        if self._state is not None:
+            self._state.cancel()
+
+    def update(self, state: Cancellable | None) -> None:
+        self._state = state
+
+
 @observable()
-class ActiveSessionManager:
-    activeSession: Session | None
+class SessionManager:
     observer: Observer
+    upcomingSessions: ObservableList[Session]
+    previousSessions: ObservableList[Session]
     rules: ObservableList[DailySessionRule]
-    _scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
-    _everythingScheduled: list[Cancellable]
-    _async: Async
+    _physicalScheduler: Scheduler[float, Callable[[], None], int]
+    _civilScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+    _everythingScheduled: list[Cancellable] = field(default_factory=list)
+    activeSession: Session | None = None
 
     def _beginSessionWithRule(
-        self, rule: SessionRule
-    ) -> Callable[[list[DateTime[ZoneInfo]], Cancellable], Deferred[None]]:
-        async def work(
-            steps: list[DateTime[ZoneInfo]], cancel: Cancellable
+        self, state: StatefulCancel, rule: SessionRule
+    ) -> RepeatingWork[list[DateTime[ZoneInfo]]]:
+        def work(
+            steps: list[DateTime[ZoneInfo]], scheduled: Cancellable
         ) -> None:
+            state.update(scheduled)
             if not steps:
                 # We will be run with an empty C{steps} when the repeating call
                 # is set up.  Once an actual instance of the rule has passed,
@@ -149,14 +179,12 @@ class ActiveSessionManager:
             session = Session(
                 steps[0].timestamp(), endSteps[0].timestamp(), True
             )
-            self._scheduler.callAt(
+            self._civilScheduler.callAt(
                 endSteps[0], self._endSessionWithRule(rule, session)
             )
             self.activeSession = session
 
-        return lambda steps, cancel: Deferred.fromCoroutine(
-            work(steps, cancel)
-        )
+        return work
 
     def _endSessionWithRule(
         self, rule: SessionRule, session: Session
@@ -172,14 +200,26 @@ class ActiveSessionManager:
         """
         # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
         # state will be corrupted
+        self._everythingScheduled, toCancel = [], self._everythingScheduled[:]
         for sched in self._everythingScheduled:
             sched.cancel()
         for rule in self.rules:
+            self._everythingScheduled.append(sc := StatefulCancel())
+            repeatedly(
+                self._civilScheduler,
+                self._beginSessionWithRule(sc, rule),
+                rule.startRule(),
+            )
+
+        def startStaticSession() -> None:
+            self.activeSession = self.upcomingSessions.pop(0)
+
+        if self.upcomingSessions:
+            earliestSession = self.upcomingSessions[0]
             self._everythingScheduled.append(
-                self._async.repeatedly(
-                    self._scheduler,
-                    rule.startRule(),
-                    self._beginSessionWithRule(rule),
+                self._physicalScheduler.callAt(
+                    earliestSession.start,
+                    startStaticSession,
                 )
             )
 
@@ -210,36 +250,20 @@ class ActiveSessionManager:
     def new(
         cls,
         observer: Observer,
-        scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int],
-    ) -> ActiveSessionManager:
-        rules: ObservableList[DailySessionRule] = ObservableList(IgnoreChanges)
-        self = cls(
-            None, observer, rules, scheduler, [], Async(TwistedAsyncDriver())
+        scheduler: Scheduler[float, Callable[[], None], int],
+    ) -> SessionManager:
+        dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(
+            guessLocalZone()
         )
-        rules.observer = self
+        branchManager, dateScheduler = branch(scheduler, dateScale)
+        self = cls(
+            observer,
+            ObservableList(IgnoreChanges),
+            ObservableList(IgnoreChanges),
+            ObservableList(IgnoreChanges),
+            scheduler,
+            dateScheduler,
+        )
+        addObserver(self.rules, self)
         self._reschedule()
         return self
-
-
-@dataclass
-class AddActiveSessions:
-    sessions: ObservableList[Session]
-
-    @contextmanager
-    def added(self, key: str, new: object) -> Iterator[None]:
-        with self.changed(key, None, new):
-            yield
-
-    @contextmanager
-    def removed(self, key: str, old: object) -> Iterator[None]:
-        yield
-
-    @contextmanager
-    def changed(self, key: str, old: object, new: object) -> Iterator[None]:
-        yield
-        if key == "activeSession":
-            assert isinstance(new, Session)
-            self.sessions.append(new)
-
-    def child(self, key: object) -> Changes[object, object]:
-        return IgnoreChanges

@@ -42,7 +42,7 @@ from .schema import (
     SavedPomodoro,
     SavedStartPrompt,
 )
-from .sessions import ActiveSessionManager, Session
+from .sessions import SessionManager, Session
 
 
 def nexusFromJSON(
