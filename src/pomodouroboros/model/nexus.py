@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from math import inf
 from typing import Callable, Iterable, Iterator, MutableSequence, Sequence
 from zoneinfo import ZoneInfo
 
@@ -213,7 +214,6 @@ class Nexus:
         # this is a new, blank nexus, so we can know that the active interval
         # is going to be an Idle interval that goes forever.
 
-        from math import inf
 
         # See pomodouroboros.model.storage.loadDefaultNexus; a little bit of
         # duplication here, since we are "idle forever" before any data exists.
