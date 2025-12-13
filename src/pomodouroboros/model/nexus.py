@@ -209,14 +209,13 @@ class Nexus:
         """
         Create a new, blank Nexus, with no attached UI, in the same time zone
         as this one.
-        """
 
+        @see: L{pomodouroboros.model.storage.loadDefaultNexus}; a little bit of
+            duplication here, since we are "idle forever" before any data
+            exists.
+        """
         # this is a new, blank nexus, so we can know that the active interval
         # is going to be an Idle interval that goes forever.
-
-
-        # See pomodouroboros.model.storage.loadDefaultNexus; a little bit of
-        # duplication here, since we are "idle forever" before any data exists.
         currentInterval = Idle(startTime=0.0, endTime=inf)
         sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
             driver := MemoryDriver()
