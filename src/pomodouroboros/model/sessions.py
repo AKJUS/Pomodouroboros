@@ -88,8 +88,8 @@ class SessionRule(Protocol):
 
 @dataclass(frozen=True)
 class DailySessionRule:
-    dailyStart: Time[ZoneInfo]
-    dailyEnd: Time[ZoneInfo]
+    dailyStart: Time[None]
+    dailyEnd: Time[None]
     days: set[Weekday]
 
     def startRule(self) -> EachDTRule:
@@ -106,29 +106,6 @@ class DailySessionRule:
             hour=self.dailyEnd.hour,
             minute=self.dailyEnd.minute,
             second=self.dailyEnd.second,
-        )
-
-    def nextAutomaticSession(
-        self, fromTimestamp: DateTime[ZoneInfo]
-    ) -> Session | None:
-        assert self.dailyStart.tzinfo == fromTimestamp.tzinfo
-        assert self.dailyEnd.tzinfo == fromTimestamp.tzinfo
-        if not self.days:
-            return None
-        startRule = self.startRule()
-        endRule = self.endRule()
-        startSteps, startNextRefs = startRule(
-            fromTimestamp, fromTimestamp + timedelta(days=7)
-        )
-        if not startSteps:
-            return None
-        endSteps, endNextRefs = endRule(
-            startSteps[0], startSteps[0] + timedelta(days=7)
-        )
-        if not endSteps:
-            return None
-        return Session(
-            startSteps[0].timestamp(), endSteps[0].timestamp(), True
         )
 
 
@@ -274,12 +251,13 @@ class SessionManager:
         cls,
         observer: Observer,
         scheduler: Scheduler[float, Callable[[], None], int],
+        zone: ZoneInfo,
         sessions: Iterable[Session] = (),
         rules: Iterable[DailySessionRule] = (),
-        zone: ZoneInfo | None = None,
     ) -> SessionManager:
         if zone is None:
-            zone = guessLocalZone()
+            # zone = guessLocalZone()
+            zone = ZoneInfo("Etc/UTC")
         dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
         now = scheduler.now()
         branchManager, dateScheduler = branch(scheduler, dateScale)

@@ -204,10 +204,10 @@ class Nexus:
         debug("active interval: yay:", candidateInterval)
         return candidateInterval
 
-    @classmethod
-    def blank(cls) -> Nexus:
+    def blank(self) -> Nexus:
         """
-        Create a new, blank Nexus, with no attached UI.
+        Create a new, blank Nexus, with no attached UI, in the same time zone
+        as this one.
         """
 
         # this is a new, blank nexus, so we can know that the active interval
@@ -221,14 +221,18 @@ class Nexus:
         sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
             driver := MemoryDriver()
         )
-        return cls(
+        return self.__class__(
             sched,
             driver,
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
             _liveInterval=currentInterval,
-            _sessionManager=SessionManager.new(IgnoreChanges, sched),
+            _sessionManager=SessionManager.new(
+                IgnoreChanges,
+                sched,
+                self._sessionManager._civilScheduler.now().tzinfo,
+            ),
         )
 
     def cloneWithoutUI(self) -> Nexus:

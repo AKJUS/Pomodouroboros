@@ -6,7 +6,7 @@ from unittest import TestCase
 from unittest.mock import ANY
 from zoneinfo import ZoneInfo
 
-from datetype import aware
+from datetype import aware, naive
 from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
@@ -199,7 +199,7 @@ class NexusTests(TestCase):
             self.testUI.setIt,
             0,
             Idle(0.0, inf),
-            _sessionManager=SessionManager.new(IgnoreChanges, sched),
+            _sessionManager=SessionManager.new(IgnoreChanges, sched, TZ),
         )
 
     def advanceTime(self, n: float) -> None:
@@ -409,14 +409,8 @@ class NexusTests(TestCase):
         A nexus should start a new session automatically when its rules say
         it's time to do that.
         """
-        dailyStart = aware(
-            time(hour=9, minute=30, tzinfo=TZ),
-            ZoneInfo,
-        )
-        dailyEnd = aware(
-            time(hour=4 + 12, minute=45, tzinfo=TZ),
-            ZoneInfo,
-        )
+        dailyStart = naive(time(hour=9, minute=30))
+        dailyEnd = naive(time(hour=4 + 12, minute=45))
         self.nexus._sessionManager.rules.append(
             DailySessionRule(
                 dailyStart,
@@ -781,8 +775,8 @@ class NexusTests(TestCase):
         """
         Auto-starting session rules are persisted.
         """
-        dailyStart = aware(time(9, tzinfo=TZ), ZoneInfo)
-        dailyEnd = aware(time(5, tzinfo=TZ), ZoneInfo)
+        dailyStart = naive(time(9))
+        dailyEnd = naive(time(5))
         # TODO: replace this with L{SessionManager.rules}
         self.nexus._sessionManager.rules.append(
             DailySessionRule(

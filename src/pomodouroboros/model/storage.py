@@ -11,9 +11,10 @@ from os.path import basename, dirname, exists, expanduser, join
 from typing import Callable, Iterator, TypeAlias, cast
 from zoneinfo import ZoneInfo
 
-from datetype import Time, aware
+from datetype import Time, aware, naive
 from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
+from fritter.drivers.datetimes import guessLocalZone
 from fritter.scheduler import schedulerFromDriver
 
 from pomodouroboros.model.intervals import Idle
@@ -42,7 +43,7 @@ from .schema import (
     SavedPomodoro,
     SavedStartPrompt,
 )
-from .sessions import SessionManager, Session
+from .sessions import Session, SessionManager
 
 
 def nexusFromJSON(
@@ -121,12 +122,11 @@ def nexusFromJSON(
 
     def loadRule(savedRule: SavedRule) -> DailySessionRule:
 
-        def loadOneTime(savedTime: SavedTime) -> Time[ZoneInfo]:
-            return aware(
+        def loadOneTime(savedTime: SavedTime) -> Time[None]:
+            return naive(
                 time.fromisoformat(savedTime["time"]).replace(
-                    tzinfo=ZoneInfo(savedTime["zone"])
+                    tzinfo=None,
                 ),
-                ZoneInfo,
             )
 
         return DailySessionRule(
@@ -168,7 +168,11 @@ def nexusFromJSON(
         _lastUpdateTime=lastUpdateTime,
         _liveInterval=Idle(0, inf),
         _sessionManager=SessionManager.new(
-            IgnoreChanges, scheduler, sessions, sessionRules
+            IgnoreChanges,
+            scheduler,
+            guessLocalZone(),
+            sessions,
+            sessionRules,
         ),
     )
     return nexus
@@ -297,11 +301,9 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
             {
                 "dailyStart": {
                     "time": rule.dailyStart.isoformat(),
-                    "zone": rule.dailyStart.tzinfo.key,
                 },
                 "dailyEnd": {
                     "time": rule.dailyEnd.isoformat(),
-                    "zone": rule.dailyEnd.tzinfo.key,
                 },
                 "days": [day.value for day in rule.days],
             }
@@ -368,7 +370,7 @@ def loadDefaultNexus(
         userInterfaceFactory,
         0,
         _liveInterval=currentInterval,
-        _sessionManager=SessionManager.new(IgnoreChanges, sched),
+        _sessionManager=SessionManager.new(IgnoreChanges, sched, guessLocalZone()),
     )
 
 
