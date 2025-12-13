@@ -36,12 +36,12 @@ cryptography==46.0.3
     #   twisted
 cython-test-exception-raiser==1.0.2
     # via twisted
-datetype==2025.10.9
+datetype==2025.11.30
     # via
     #   Pomodouroboros (pyproject.toml)
     #   fritter
     #   quickmacapp
-fritter==0.0.9
+fritter==0.1.0
     # via Pomodouroboros (pyproject.toml)
 h11==0.16.0
     # via
@@ -61,7 +61,7 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.148.3
+hypothesis==6.148.7
     # via twisted
 idna==3.11
     # via
