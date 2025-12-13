@@ -23,10 +23,10 @@ class SessionDataSource(NSObject):
         self.nexus = newNexus
 
     def sessions(self) -> list[Session]:
-        return list(
+        return [
             *self.nexus._sessionManager.previousSessions,
             *self.nexus._sessionManager.upcomingSessions,
-        )
+        ]
 
     # pragma mark NSTableViewDataSource
 
