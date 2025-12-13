@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 from datetime import datetime, time
 from json import dumps, loads
-from typing import Type, TypeVar
+from typing import Callable, Type, TypeVar
 from unittest import TestCase
 from unittest.mock import ANY
 from zoneinfo import ZoneInfo
 
 from datetype import aware
+from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
 from twisted.internet.interfaces import IReactorTime
@@ -27,7 +28,7 @@ from ..intervals import (
 )
 from ..nexus import Nexus, _noUIFactory
 from ..observables import Changes, IgnoreChanges, SequenceObserver
-from ..sessions import DailySessionRule, Session, Weekday
+from ..sessions import DailySessionRule, Session, SessionManager, Weekday
 from ..storage import nexusFromJSON, nexusToJSON
 
 TZ = ZoneInfo("America/Los_Angeles")
@@ -189,12 +190,16 @@ class NexusTests(TestCase):
         self.testUI = TestUserInterface(self.clock)
         from math import inf
 
+        sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+            driver := MemoryDriver()
+        )
         self.nexus = Nexus(
-            schedulerFromDriver(driver := MemoryDriver()),
+            sched,
             driver,
             self.testUI.setIt,
             0,
             Idle(0.0, inf),
+            _sessionManager=SessionManager.new(IgnoreChanges, sched),
         )
 
     def advanceTime(self, n: float) -> None:
@@ -425,7 +430,7 @@ class NexusTests(TestCase):
         # TODO: try to observe the creation of this session in the way that the
         # UI would
         self.assertEqual(
-            self.nexus._sessions[:],
+            self.nexus._sessionManager.previousSessions[:],
             [Session(start=1715185800.0, end=1715211900.0, automatic=True)],
         )
 
@@ -763,7 +768,14 @@ class NexusTests(TestCase):
             self.nexus._previousStreaks, roundTrip._previousStreaks
         )
         self.assertEqual(self.nexus._currentStreak, roundTrip._currentStreak)
-        self.assertEqual(self.nexus._sessions, roundTrip._sessions)
+        self.assertEqual(
+            self.nexus._sessionManager.previousSessions,
+            roundTrip._sessionManager.previousSessions,
+        )
+        self.assertEqual(
+            self.nexus._sessionManager.upcomingSessions,
+            roundTrip._sessionManager.upcomingSessions,
+        )
 
     def test_saveSessionRules(self) -> None:
         """
@@ -781,7 +793,9 @@ class NexusTests(TestCase):
         )
         self.assertEqual(
             self.nexus._sessionManager.rules,
-            nexusFromJSON(nexusToJSON(self.nexus), _noUIFactory)._sessionManager.rules,
+            nexusFromJSON(
+                nexusToJSON(self.nexus), _noUIFactory
+            )._sessionManager.rules,
         )
 
     def test_achievedEarly(self) -> None:

@@ -9,7 +9,7 @@ from typing import Callable, Iterable, Iterator, MutableSequence, Sequence
 from zoneinfo import ZoneInfo
 
 from datetype import aware, DateTime
-from fritter.boundaries import ScheduledCall, Scheduler
+from fritter.boundaries import ScheduledCall, Scheduler, PhysicalScheduler
 from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone, DateScale
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.twisted import TwistedTimeDriver
@@ -117,14 +117,10 @@ class Nexus:
     while implementing so as to avoid confusion
     """
 
-    _sessionManager: SessionManager = None  # type:ignore
+    _sessionManager: SessionManager
     """
     The manager of and creator of session objects.
     """
-
-    def __post_init__(self) -> None:
-        if self._sessionManager is None:
-            self._sessionManager = SessionManager.new(IgnoreChanges, self._scheduler)
 
     _intentions: MutableSequence[Intention] = field(
         default_factory=lambda: ObservableList(IgnoreChanges)
@@ -154,10 +150,6 @@ class Nexus:
     _currentStreak: list[AnyStreakInterval] = field(default_factory=list)
     "The user's current streak."
 
-    _sessions: ObservableList[Session] = field(
-        default_factory=lambda: ObservableList(IgnoreChanges)
-    )
-
     _promptForStartWhenIdleInSession: bool = True
     """
     If true, generate start prompts based on potential score loss (before end
@@ -181,16 +173,8 @@ class Nexus:
     """
 
     def _newIdleInterval(self) -> Idle:
-        from math import inf
-
-        nextSessionTime = next(
-            (
-                session.start
-                for session in self._sessions
-                if session.end > self._lastUpdateTime
-                and session.start > self._lastUpdateTime
-            ),
-            inf,
+        nextSessionTime = self._sessionManager.upcomingSessionStartTime(
+            self._lastUpdateTime
         )
         return Idle(startTime=self._lastUpdateTime, endTime=nextSessionTime)
 
@@ -234,15 +218,17 @@ class Nexus:
         # See pomodouroboros.model.storage.loadDefaultNexus; a little bit of
         # duplication here, since we are "idle forever" before any data exists.
         currentInterval = Idle(startTime=0.0, endTime=inf)
-        _sessions = ObservableList[Session](IgnoreChanges)
+        sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+            driver := MemoryDriver()
+        )
         return cls(
-            schedulerFromDriver(driver := MemoryDriver()),
+            sched,
             driver,
-            _sessions=_sessions,
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
             _liveInterval=currentInterval,
+            _sessionManager=SessionManager.new(IgnoreChanges, sched),
         )
 
     def cloneWithoutUI(self) -> Nexus:
@@ -476,9 +462,7 @@ class Nexus:
         Add a 'work session'; a discrete interval where we will be scored, and
         notified of potential drops to our score if we don't set intentions.
         """
-        self._sessions.append(Session(startTime, endTime, False))
-        # MutableSequence doesn't have a .sort() method
-        self._sessions[:] = sorted(self._sessions)
+        self._sessionManager.addManualSession(startTime, endTime)
 
     def startPomodoro(self, intention: Intention) -> PomStartResult:
         """
@@ -538,15 +522,6 @@ class Nexus:
     TODO: include me in the persistence, so we don't forget, or find some
     better timestamp to hang this logic on
     """
-
-    def _nextSession(self, now: float) -> Session | None:
-        """
-        Get the first already-computed session that has not yet begun.
-        """
-        for session in self._sessions:
-            if session.start > now:
-                return session
-        return None
 
     def _intervalJustEnded(self) -> None:
         """

@@ -353,9 +353,11 @@ def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
     if prop is None:
         raise TypeError(f"{observable} is not @observable")
     old = prop.get()
-    if not (old is IgnoreChanges or isinstance(old, IgnoreChanges)):
-        newObserver = _MultiChanges(old, observer)
-    prop.set(newObserver)
+    prop.set(
+        observer
+        if (old is IgnoreChanges or isinstance(old, IgnoreChanges))
+        else _MultiChanges(old, observer)
+    )
     # okay now we need to descend down the observables hierarchy
     for k, v in observable.__class__.__dict__.items():
         subservable = getattr(observable, k, None)

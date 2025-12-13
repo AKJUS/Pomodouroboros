@@ -5,11 +5,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import IntEnum
+from math import inf
 from typing import (
     TYPE_CHECKING,
     Callable,
     ContextManager,
     Iterator,
+    Iterable,
     Protocol,
     Sequence,
 )
@@ -172,19 +174,38 @@ class SessionManager:
                 # C{steps} will have that value in it.
                 return
             endSteps, endNextRefs = rule.endRule()(
-                steps[0], steps[0] + timedelta(days=7)
+                steps[-1], steps[-1] + timedelta(days=7)
             )
             if not endSteps:
                 return None
             session = Session(
-                steps[0].timestamp(), endSteps[0].timestamp(), True
+                steps[-1].timestamp(), endSteps[0].timestamp(), True
             )
             self._civilScheduler.callAt(
                 endSteps[0], self._endSessionWithRule(rule, session)
             )
             self.activeSession = session
+            self.previousSessions.append(session)
 
         return work
+
+    def upcomingSessionStartTime(self, fromTime: float) -> float:
+        """
+        Return the time of the next upcoming session.
+        """
+        return next(
+            (
+                session.start
+                for session in self.upcomingSessions
+                if session.end > fromTime and session.start > fromTime
+            ),
+            inf,
+        )
+
+    def addManualSession(self, startTime: float, endTime: float) -> None:
+        self.upcomingSessions.append(Session(startTime, endTime, False))
+        # MutableSequence doesn't have a .sort() method
+        self.upcomingSessions[:] = sorted(self.upcomingSessions)
 
     def _endSessionWithRule(
         self, rule: SessionRule, session: Session
@@ -201,7 +222,7 @@ class SessionManager:
         # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
         # state will be corrupted
         self._everythingScheduled, toCancel = [], self._everythingScheduled[:]
-        for sched in self._everythingScheduled:
+        for sched in toCancel:
             sched.cancel()
         for rule in self.rules:
             self._everythingScheduled.append(sc := StatefulCancel())
@@ -212,7 +233,9 @@ class SessionManager:
             )
 
         def startStaticSession() -> None:
-            self.activeSession = self.upcomingSessions.pop(0)
+            # TODO: make sure it's … the same session? just generally clean up?
+            session = self.activeSession = self.upcomingSessions.pop(0)
+            self.previousSessions.append(session)
 
         if self.upcomingSessions:
             earliestSession = self.upcomingSessions[0]
@@ -251,19 +274,28 @@ class SessionManager:
         cls,
         observer: Observer,
         scheduler: Scheduler[float, Callable[[], None], int],
+        sessions: Iterable[Session] = (),
+        rules: Iterable[DailySessionRule] = (),
+        zone: ZoneInfo | None = None,
     ) -> SessionManager:
-        dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(
-            guessLocalZone()
-        )
+        if zone is None:
+            zone = guessLocalZone()
+        dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
+        now = scheduler.now()
         branchManager, dateScheduler = branch(scheduler, dateScale)
+        upcoming: ObservableList[Session] = ObservableList(IgnoreChanges)
+        previous: ObservableList[Session] = ObservableList(IgnoreChanges)
+        for session in sessions:
+            (upcoming if session.start < now else previous).append(session)
         self = cls(
-            observer,
-            ObservableList(IgnoreChanges),
-            ObservableList(IgnoreChanges),
-            ObservableList(IgnoreChanges),
-            scheduler,
-            dateScheduler,
+            observer=observer,
+            upcomingSessions=upcoming,
+            previousSessions=previous,
+            rules=ObservableList(IgnoreChanges, list(rules)),
+            _physicalScheduler=scheduler,
+            _civilScheduler=dateScheduler,
         )
         addObserver(self.rules, self)
+        addObserver(self.upcomingSessions, self)
         self._reschedule()
         return self
