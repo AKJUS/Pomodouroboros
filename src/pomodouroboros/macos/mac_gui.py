@@ -14,11 +14,11 @@ from AppKit import (
     NSTextField,
     NSWindow,
 )
-from datetype import aware
+from datetype import aware, naive
 from Foundation import NSIndexSet, NSObject
 from fritter.drivers.datetimes import guessLocalZone
 from objc import IBAction, IBOutlet, object_property, super
-from quickmacapp import Status, answer, mainpoint, dockIconWhenVisible
+from quickmacapp import Status, answer, dockIconWhenVisible, mainpoint
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import LoopingCall
@@ -331,15 +331,14 @@ def synthesizeRuleWhenSet(
                    this should at least do something
             """
             newRule = self.synthesizeRule()
-            self.nexus._sessionRules[:1] = [newRule]
+            self.nexus._sessionManager.rules[:1] = [newRule]
 
     return aSetter
 
 
-TZ = guessLocalZone()
 defaultRule = DailySessionRule(
-    aware(time(9, 0, tzinfo=TZ), ZoneInfo),
-    aware(time(5 + 12, 0, tzinfo=TZ), ZoneInfo),
+    naive(time(9, 0)),
+    naive(time(5 + 12, 0)),
     days={
         Weekday.monday,
         Weekday.tuesday,
@@ -388,8 +387,8 @@ class AutoStreakRuleValues(NSObject):
     # Methods!
     def awakeWithNexus_(self, nexus: Nexus) -> None:
         self.nexus = nexus
-        if self.nexus._sessionRules:
-            self.absorbRule_(self.nexus._sessionRules[0])
+        if self.nexus._sessionManager.rules:
+            self.absorbRule_(self.nexus._sessionManager.rules[0])
         for attribute in self._relevantAttributes:
             if getattr(self, attribute) is None:
                 self.absorbRule_(defaultRule)
@@ -435,21 +434,17 @@ class AutoStreakRuleValues(NSObject):
             if getattr(self, enumerated.name + "Set"):
                 days.add(enumerated)
         return DailySessionRule(
-            aware(
+            naive(
                 time(
                     hour=ampmify(self.startHour, self.startAMPM),
                     minute=self.startMinute,
-                    tzinfo=TZ,
-                ),
-                ZoneInfo,
+                )
             ),
-            aware(
+            naive(
                 time(
                     hour=ampmify(self.endHour, self.endAMPM),
                     minute=self.endMinute,
-                    tzinfo=TZ,
-                ),
-                ZoneInfo,
+                )
             ),
             days=days,
         )

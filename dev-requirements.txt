@@ -29,7 +29,7 @@ cryptography==46.0.3
     # via
     #   pyopenssl
     #   service-identity
-datetype==2025.10.9
+datetype==2025.11.30
     # via
     #   Pomodouroboros (pyproject.toml)
     #   fritter
@@ -37,7 +37,7 @@ delocate==0.13.0
     # via encrust
 encrust==2025.11.30
     # via Pomodouroboros (pyproject.toml)
-fritter==0.0.9
+fritter==0.1.0
     # via Pomodouroboros (pyproject.toml)
 h2==4.3.0
     # via twisted
@@ -53,19 +53,21 @@ idna==3.11
     #   twisted
 incremental==24.11.0
     # via twisted
+librt==0.7.3
+    # via mypy
 macholib==1.16.4
     # via
     #   delocate
     #   py2app
 modulegraph==0.19.7
     # via py2app
-mypy==1.17.1
+mypy==1.19.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   mypy-zope
 mypy-extensions==1.1.0
     # via mypy
-mypy-zope==1.0.13
+mypy-zope==1.0.14
     # via Pomodouroboros (pyproject.toml)
 packaging==25.0
     # via
@@ -91,7 +93,7 @@ pycairo==1.29.0
     # via Pomodouroboros (pyproject.toml)
 pycparser==2.23
     # via cffi
-pygobject-stubs==2.14.0
+pygobject-stubs==2.16.0
     # via Pomodouroboros (pyproject.toml)
 pyopenssl==25.3.0
     # via twisted
@@ -117,6 +119,7 @@ typing-extensions==4.15.0
     # via
     #   delocate
     #   mypy
+    #   pygobject-stubs
     #   twisted
 tzdata==2025.2
     # via fritter

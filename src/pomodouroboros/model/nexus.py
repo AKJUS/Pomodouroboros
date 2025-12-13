@@ -1,17 +1,21 @@
 # -*- test-case-name: pomodouroboros.model.test -*-
 from __future__ import annotations
 
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from datetime import datetime
+from math import inf
 from typing import Callable, Iterable, Iterator, MutableSequence, Sequence
 from zoneinfo import ZoneInfo
 
-from datetype import aware
-from fritter.boundaries import ScheduledCall, Scheduler
+from datetype import aware, DateTime
+from fritter.boundaries import ScheduledCall, Scheduler, PhysicalScheduler
+from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone, DateScale
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.twisted import TwistedTimeDriver
 from fritter.scheduler import schedulerFromDriver
+from fritter.tree import branch, Scale, BranchManager
 
 from .boundaries import (
     EvaluationResult,
@@ -35,8 +39,12 @@ from .intervals import (
     Pomodoro,
     StartPrompt,
 )
-from .observables import IgnoreChanges, ObservableList
-from .sessions import DailySessionRule, Session
+from .observables import Changes, IgnoreChanges, ObservableList
+from .sessions import (
+    SessionManager,
+    DailySessionRule,
+    Session,
+)
 
 
 @dataclass(frozen=True)
@@ -110,6 +118,11 @@ class Nexus:
     while implementing so as to avoid confusion
     """
 
+    _sessionManager: SessionManager
+    """
+    The manager of and creator of session objects.
+    """
+
     _intentions: MutableSequence[Intention] = field(
         default_factory=lambda: ObservableList(IgnoreChanges)
     )
@@ -128,10 +141,6 @@ class Nexus:
     and pomodoros are.
     """
 
-    _sessionRules: list[DailySessionRule] = field(default_factory=list)
-    """
-    The rules for when to automatically start a session.
-    """
     # TODO: there should be other types of rules via DailySessionRule
 
     _previousStreaks: list[list[AnyStreakInterval]] = field(
@@ -141,10 +150,6 @@ class Nexus:
 
     _currentStreak: list[AnyStreakInterval] = field(default_factory=list)
     "The user's current streak."
-
-    _sessions: ObservableList[Session] = field(
-        default_factory=lambda: ObservableList(IgnoreChanges)
-    )
 
     _promptForStartWhenIdleInSession: bool = True
     """
@@ -169,16 +174,8 @@ class Nexus:
     """
 
     def _newIdleInterval(self) -> Idle:
-        from math import inf
-
-        nextSessionTime = next(
-            (
-                session.start
-                for session in self._sessions
-                if session.end > self._lastUpdateTime
-                and session.start > self._lastUpdateTime
-            ),
-            inf,
+        nextSessionTime = self._sessionManager.upcomingSessionStartTime(
+            self._lastUpdateTime
         )
         return Idle(startTime=self._lastUpdateTime, endTime=nextSessionTime)
 
@@ -208,27 +205,33 @@ class Nexus:
         debug("active interval: yay:", candidateInterval)
         return candidateInterval
 
-    @classmethod
-    def blank(cls) -> Nexus:
+    def blank(self) -> Nexus:
         """
-        Create a new, blank Nexus, with no attached UI.
-        """
+        Create a new, blank Nexus, with no attached UI, in the same time zone
+        as this one.
 
+        @see: L{pomodouroboros.model.storage.loadDefaultNexus}; a little bit of
+            duplication here, since we are "idle forever" before any data
+            exists.
+        """
         # this is a new, blank nexus, so we can know that the active interval
         # is going to be an Idle interval that goes forever.
-
-        from math import inf
-
-        # See pomodouroboros.model.storage.loadDefaultNexus; a little bit of
-        # duplication here, since we are "idle forever" before any data exists.
         currentInterval = Idle(startTime=0.0, endTime=inf)
-        return cls(
-            schedulerFromDriver(driver := MemoryDriver()),
+        sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+            driver := MemoryDriver()
+        )
+        return self.__class__(
+            sched,
             driver,
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
             _liveInterval=currentInterval,
+            _sessionManager=SessionManager.new(
+                IgnoreChanges,
+                sched,
+                self._sessionManager._civilScheduler.now().tzinfo,
+            ),
         )
 
     def cloneWithoutUI(self) -> Nexus:
@@ -237,7 +240,8 @@ class Nexus:
         to perform hypothetical model interactions.
         """
         debug("constructing hypothetical")
-        from .storage import nexusToJSON, nexusFromJSON
+        from .storage import nexusFromJSON, nexusToJSON
+
         hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory)
         # Given that we are creating this hypothetical future to determine when
         # to emit our next start prompt, configure it such that advancing its
@@ -313,89 +317,6 @@ class Nexus:
             i for i in self._intentions if not i.completed and not i.abandoned
         ]
 
-    def _activeSession(self, oldTime: float, newTime: float) -> Session | None:
-        """
-        Determine what the current active session is.
-
-        we want to convert this to a callback, that is run in (relative)
-        isolation
-
-        which is to say that when a session starts, we want to mutate the local
-        state to say that that session is running
-
-        but there's the sleep-for-days scenario, where you run the callback
-        that starts the session, but we are already past the end of that
-        session, then you start running some other callback that expects
-        session state to be accurate, but the clock is pointing at a time where
-        the session has already ended, but the 'session ended' callback isn't
-        called yet?
-
-        one solution: schedule session start / session end callbacks in pairs?
-        if they're scheduled together, then they'll be sorted and called at the
-        appropriate time, because the 'end' callback will already have been
-        invoked
-
-        we might be able to do this by just having a repeating 'start' timer
-        that immediately schedules an 'end' timer when it is run
-
-        but if we schedule both timers together at scheduling time we have some
-        assurances that they'll run at least relative to each other
-
-        this should be inverted into a I{series} of timers rather than one
-        timer
-
-        there's one pair of timers that is recomputed each time the automatic
-        session rules are edited; start (then end) the next automatic session.
-
-        @param oldTime: the time that we have already considered.  We need to
-            use some reference point to start searching for new automatic
-            sessions, so this sets a lower bound on the time we have to search
-            from.
-
-        @param newTime: the time it is now.
-        """
-        # an absurdly high bound for a session length, 7 days; we could
-        # probably dial this down to 18 hours just based on, like, human
-        # physiology.
-        MAX_SESSION_LENGTH = 86400 * 7
-
-        oldTime = max(oldTime, newTime - MAX_SESSION_LENGTH)
-
-        for rule in self._sessionRules:
-            thisOldTime = oldTime
-            while thisOldTime < newTime:
-                tz = rule.dailyStart.tzinfo
-                assert rule.dailyStart < rule.dailyEnd
-                fromWhen = aware(
-                    datetime.fromtimestamp(
-                        thisOldTime,
-                        tz,
-                    ),
-                    ZoneInfo,
-                )
-                created = rule.nextAutomaticSession(fromWhen)
-                if created is not None:
-                    newEnd = created.end
-                    fromWhenT = fromWhen.timestamp()
-                    assert (
-                        created.start < created.end
-                    ), f"{created.start}, {created.end}"
-                    assert newEnd > fromWhenT, f"{newEnd} <= {fromWhenT}"
-                    if created.end > newTime:
-                        # Don't create sessions that are already over at the
-                        # current moment.
-                        self._sessions.append(created)
-                    thisOldTime = created.end
-                else:
-                    break
-
-        for session in self._sessions:
-            if session.start <= self._lastUpdateTime < session.end:
-                debug("session active", session.start, session.end)
-                return session
-        debug("no session")
-        return None
-
     def advanceToTime(self, newTime: float) -> None:
         """
         Advance to the epoch time given.
@@ -438,8 +359,9 @@ class Nexus:
                         # ideal score with which to prompt the user. (See
                         # cloneWithoutUI for implementation notes.)
 
-                        activeSession = self._activeSession(oldTime, newTime)
-                        if activeSession is not None:
+                        if (
+                            activeSession := self._sessionManager.activeSession
+                        ) is not None:
                             scoreInfo = activeSession.idealScoreFor(self)
                             nextDrop = scoreInfo.nextPointLoss
                             if nextDrop is not None and nextDrop > newTime:
@@ -543,9 +465,7 @@ class Nexus:
         Add a 'work session'; a discrete interval where we will be scored, and
         notified of potential drops to our score if we don't set intentions.
         """
-        self._sessions.append(Session(startTime, endTime, False))
-        # MutableSequence doesn't have a .sort() method
-        self._sessions[:] = sorted(self._sessions)
+        self._sessionManager.addManualSession(startTime, endTime)
 
     def startPomodoro(self, intention: Intention) -> PomStartResult:
         """
@@ -605,17 +525,6 @@ class Nexus:
     TODO: include me in the persistence, so we don't forget, or find some
     better timestamp to hang this logic on
     """
-
-    def _nextSession(self, now: float) -> Session | None:
-        """
-        Get the first already-computed session that has not yet begun.
-        """
-        for session in self._sessions:
-            if session.start > now:
-                return session
-        return None
-
-
 
     def _intervalJustEnded(self) -> None:
         """

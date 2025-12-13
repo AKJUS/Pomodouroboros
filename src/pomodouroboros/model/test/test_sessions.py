@@ -4,31 +4,28 @@ from typing import Any, Callable, Iterator
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from datetype import DateTime, aware
+from datetype import DateTime, aware, naive
 from fritter.boundaries import Scheduler
 from fritter.drivers.datetimes import DateTimeDriver
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import schedulerFromDriver
 
-from pomodouroboros.model.observables import Changes
+from pomodouroboros.model.observables import Changes, addObserver, DebugChanges
 
-from ..sessions import ActiveSessionManager, DailySessionRule, Session, Weekday
+from ..sessions import SessionManager, DailySessionRule, Session, Weekday
 
-PT = ZoneInfo("America/Los_Angeles")
-
+PT = ZoneInfo("US/Pacific")
 testingRule = DailySessionRule(
-    aware(time(3, 4, 5, tzinfo=PT), ZoneInfo),
-    aware(time(4, 5, 6, tzinfo=PT), ZoneInfo),
+    naive(time(3, 4, 5)),
+    naive(time(4, 5, 6)),
     days={Weekday.tuesday, Weekday.wednesday, Weekday.friday},
 )
 
 
 class SessionStartEndSchedulingTests(TestCase):
     def test_observeScheduledSession(self) -> None:
-        dateScheduler: Scheduler[
-            DateTime[ZoneInfo], Callable[[], None], int
-        ] = schedulerFromDriver(
-            DateTimeDriver(memory := MemoryDriver(), zone=PT)
+        scheduler: Scheduler[float, Callable[[], None], int] = (
+            schedulerFromDriver(memory := MemoryDriver())
         )
         desiredStart = aware(
             datetime(2023, 11, 7, 3, 4, 5, tzinfo=PT), ZoneInfo
@@ -65,7 +62,9 @@ class SessionStartEndSchedulingTests(TestCase):
             def child(self, key: object) -> Changes[Any, Any]:
                 return self
 
-        asm = ActiveSessionManager.new(Observe(), dateScheduler)
+        asm = SessionManager.new(Observe(), scheduler, PT)
+        if 0:
+            addObserver(asm, DebugChanges())
         asm.rules.append(testingRule)
         self.assertIs(asm.activeSession, None)
         memory.advance(desiredStart + 10 - memory.now())
@@ -86,80 +85,15 @@ class SessionStartEndSchedulingTests(TestCase):
             ],
         )
         expectedRule = DailySessionRule(
-            dailyStart=aware(
-                time(3, 4, 5, tzinfo=ZoneInfo(key="America/Los_Angeles")),
-                ZoneInfo,
-            ),
-            dailyEnd=aware(
-                time(4, 5, 6, tzinfo=ZoneInfo(key="America/Los_Angeles")),
-                ZoneInfo,
-            ),
+            dailyStart=naive(time(3, 4, 5)),
+            dailyEnd=naive(time(4, 5, 6)),
             days={Weekday.tuesday, Weekday.wednesday, Weekday.friday},
         )
-        self.assertEqual(
+        self.assertIn(
+            (
+                "add",
+                "rules",
+                [expectedRule],
+            ),
             extraneousChanges,
-            [
-                (
-                    "add",
-                    "rules",
-                    [expectedRule],
-                )
-            ],
-        )
-
-
-class SessionGenerationTests(TestCase):
-    def test_sameDay(self) -> None:
-        desiredStart = aware(
-            datetime(2023, 11, 7, 3, 4, 5, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        desiredEnd = aware(
-            datetime(2023, 11, 7, 4, 5, 6, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        self.assertEqual(
-            testingRule.nextAutomaticSession(
-                aware(datetime(2023, 11, 7, 2, tzinfo=PT), ZoneInfo)
-            ),
-            Session(desiredStart, desiredEnd, True),
-        )
-
-    def test_nextDay(self) -> None:
-        desiredStart = aware(
-            datetime(2023, 11, 8, 3, 4, 5, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        desiredEnd = aware(
-            datetime(2023, 11, 8, 4, 5, 6, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        self.assertEqual(
-            testingRule.nextAutomaticSession(
-                aware(datetime(2023, 11, 7, 8, tzinfo=PT), ZoneInfo)
-            ),
-            Session(desiredStart, desiredEnd, True),
-        )
-
-    def test_skipDay(self) -> None:
-        desiredStart = aware(
-            datetime(2023, 11, 10, 3, 4, 5, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        desiredEnd = aware(
-            datetime(2023, 11, 10, 4, 5, 6, tzinfo=PT), ZoneInfo
-        ).timestamp()
-        self.assertEqual(
-            testingRule.nextAutomaticSession(
-                aware(datetime(2023, 11, 8, 8, tzinfo=PT), ZoneInfo)
-            ),
-            Session(desiredStart, desiredEnd, True),
-        )
-
-    def test_noDays(self) -> None:
-        noDaysRule = DailySessionRule(
-            aware(time(3, 4, 5, tzinfo=PT), ZoneInfo),
-            aware(time(4, 5, 6, tzinfo=PT), ZoneInfo),
-            days=set(),
-        )
-        self.assertIs(
-            noDaysRule.nextAutomaticSession(
-                aware(datetime(2023, 11, 8, 8, tzinfo=PT), ZoneInfo)
-            ),
-            None,
         )

@@ -11,9 +11,10 @@ from os.path import basename, dirname, exists, expanduser, join
 from typing import Callable, Iterator, TypeAlias, cast
 from zoneinfo import ZoneInfo
 
-from datetype import Time, aware
+from datetype import Time, aware, naive
 from fritter.boundaries import Scheduler
 from fritter.drivers.memory import MemoryDriver
+from fritter.drivers.datetimes import guessLocalZone
 from fritter.scheduler import schedulerFromDriver
 
 from pomodouroboros.model.intervals import Idle
@@ -42,7 +43,7 @@ from .schema import (
     SavedPomodoro,
     SavedStartPrompt,
 )
-from .sessions import Session
+from .sessions import Session, SessionManager
 
 
 def nexusFromJSON(
@@ -121,12 +122,11 @@ def nexusFromJSON(
 
     def loadRule(savedRule: SavedRule) -> DailySessionRule:
 
-        def loadOneTime(savedTime: SavedTime) -> Time[ZoneInfo]:
-            return aware(
+        def loadOneTime(savedTime: SavedTime) -> Time[None]:
+            return naive(
                 time.fromisoformat(savedTime["time"]).replace(
-                    tzinfo=ZoneInfo(savedTime["zone"])
+                    tzinfo=None,
                 ),
-                ZoneInfo,
             )
 
         return DailySessionRule(
@@ -140,6 +140,15 @@ def nexusFromJSON(
         driver := MemoryDriver()
     )
     driver.advance(lastUpdateTime)
+    sessionRules = [loadRule(rule) for rule in saved.get("sessionRules", [])]
+    sessions = [
+        Session(
+            start=each["start"],
+            end=each["end"],
+            automatic=bool(each.get("automatic")),
+        )
+        for each in saved["sessions"]
+    ]
     nexus = Nexus(
         scheduler,
         driver,
@@ -155,23 +164,16 @@ def nexusFromJSON(
         ),
         _previousStreaks=previousStreaks,
         _currentStreak=currentStreak,
-        _sessions=ObservableList(
-            IgnoreChanges,
-            [
-                Session(
-                    start=each["start"],
-                    end=each["end"],
-                    automatic=bool(each.get("automatic")),
-                )
-                for each in saved["sessions"]
-            ],
-        ),
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
         _liveInterval=Idle(0, inf),
-        _sessionRules=[
-            loadRule(rule) for rule in saved.get("sessionRules", [])
-        ],
+        _sessionManager=SessionManager.new(
+            IgnoreChanges,
+            scheduler,
+            guessLocalZone(),
+            sessions,
+            sessionRules,
+        ),
     )
     return nexus
 
@@ -290,21 +292,22 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
                 "end": session.end,
                 "automatic": session.automatic,
             }
-            for session in nexus._sessions
+            for session in [
+                *nexus._sessionManager.previousSessions,
+                *nexus._sessionManager.upcomingSessions,
+            ]
         ],
         "sessionRules": [
             {
                 "dailyStart": {
                     "time": rule.dailyStart.isoformat(),
-                    "zone": rule.dailyStart.tzinfo.key,
                 },
                 "dailyEnd": {
                     "time": rule.dailyEnd.isoformat(),
-                    "zone": rule.dailyEnd.tzinfo.key,
                 },
                 "days": [day.value for day in rule.days],
             }
-            for rule in nexus._sessionRules
+            for rule in nexus._sessionManager.rules
         ],
     }
 
@@ -358,12 +361,16 @@ def loadDefaultNexus(
     # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
     # interval
     currentInterval = Idle(startTime=0.0, endTime=inf)
+    sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+        driver := MemoryDriver()
+    )
     return Nexus(
-        schedulerFromDriver(driver := MemoryDriver()),
+        sched,
         driver,
         userInterfaceFactory,
         0,
         _liveInterval=currentInterval,
+        _sessionManager=SessionManager.new(IgnoreChanges, sched, guessLocalZone()),
     )
 
 

@@ -5,21 +5,31 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import IntEnum
+from math import inf
 from typing import (
     TYPE_CHECKING,
     Callable,
     ContextManager,
     Iterator,
+    Iterable,
     Protocol,
     Sequence,
 )
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, Time
-from fritter.boundaries import Cancellable, Day, ScheduledCall, Scheduler
+from fritter.boundaries import (
+    Cancellable,
+    Day,
+    RepeatingWork,
+    ScheduledCall,
+    Scheduler,
+)
+from fritter.drivers.datetimes import DateScale, guessLocalZone
 from fritter.drivers.twisted import TwistedAsyncDriver
-from fritter.repeat import Async
+from fritter.repeat import repeatedly
 from fritter.repeat.rules.datetimes import EachDTRule, EachWeekOn
+from fritter.tree import Scale, branch
 from twisted.internet.defer import Deferred
 
 from pomodouroboros.model.observables import (
@@ -28,6 +38,7 @@ from pomodouroboros.model.observables import (
     ObservableList,
     Observer,
     observable,
+    addObserver,
 )
 
 if TYPE_CHECKING:
@@ -77,8 +88,8 @@ class SessionRule(Protocol):
 
 @dataclass(frozen=True)
 class DailySessionRule:
-    dailyStart: Time[ZoneInfo]
-    dailyEnd: Time[ZoneInfo]
+    dailyStart: Time[None]
+    dailyEnd: Time[None]
     days: set[Weekday]
 
     def startRule(self) -> EachDTRule:
@@ -97,66 +108,81 @@ class DailySessionRule:
             second=self.dailyEnd.second,
         )
 
-    def nextAutomaticSession(
-        self, fromTimestamp: DateTime[ZoneInfo]
-    ) -> Session | None:
-        assert self.dailyStart.tzinfo == fromTimestamp.tzinfo
-        assert self.dailyEnd.tzinfo == fromTimestamp.tzinfo
-        if not self.days:
-            return None
-        startRule = self.startRule()
-        endRule = self.endRule()
-        startSteps, startNextRefs = startRule(
-            fromTimestamp, fromTimestamp + timedelta(days=7)
-        )
-        if not startSteps:
-            return None
-        endSteps, endNextRefs = endRule(
-            startSteps[0], startSteps[0] + timedelta(days=7)
-        )
-        if not endSteps:
-            return None
-        return Session(
-            startSteps[0].timestamp(), endSteps[0].timestamp(), True
-        )
+
+@dataclass
+class StatefulCancel:
+    """
+    a canceller that holds another canceller and updates it, canceling it when
+    cancelled
+    """
+
+    _state: Cancellable | None = None
+
+    def cancel(self) -> None:
+        state = self._state
+        if self._state is not None:
+            self._state.cancel()
+
+    def update(self, state: Cancellable | None) -> None:
+        self._state = state
 
 
 @observable()
-class ActiveSessionManager:
-    activeSession: Session | None
+class SessionManager:
     observer: Observer
-    rules: ObservableList[SessionRule]
-    _scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
-    _everythingScheduled: list[Cancellable]
-    _async: Async
+    upcomingSessions: ObservableList[Session]
+    previousSessions: ObservableList[Session]
+    rules: ObservableList[DailySessionRule]
+    _physicalScheduler: Scheduler[float, Callable[[], None], int]
+    _civilScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+    _everythingScheduled: list[Cancellable] = field(default_factory=list)
+    activeSession: Session | None = None
 
     def _beginSessionWithRule(
-        self, rule: SessionRule
-    ) -> Callable[[list[DateTime[ZoneInfo]], Cancellable], Deferred[None]]:
-        async def work(
-            steps: list[DateTime[ZoneInfo]], cancel: Cancellable
+        self, state: StatefulCancel, rule: SessionRule
+    ) -> RepeatingWork[list[DateTime[ZoneInfo]]]:
+        def work(
+            steps: list[DateTime[ZoneInfo]], scheduled: Cancellable
         ) -> None:
+            state.update(scheduled)
             if not steps:
                 # We will be run with an empty C{steps} when the repeating call
                 # is set up.  Once an actual instance of the rule has passed,
                 # C{steps} will have that value in it.
                 return
             endSteps, endNextRefs = rule.endRule()(
-                steps[0], steps[0] + timedelta(days=7)
+                steps[-1], steps[-1] + timedelta(days=7)
             )
             if not endSteps:
                 return None
             session = Session(
-                steps[0].timestamp(), endSteps[0].timestamp(), True
+                steps[-1].timestamp(), endSteps[0].timestamp(), True
             )
-            self._scheduler.callAt(
+            self._civilScheduler.callAt(
                 endSteps[0], self._endSessionWithRule(rule, session)
             )
             self.activeSession = session
+            self.previousSessions.append(session)
 
-        return lambda steps, cancel: Deferred.fromCoroutine(
-            work(steps, cancel)
+        return work
+
+    def upcomingSessionStartTime(self, fromTime: float) -> float:
+        """
+        Return the time of the next upcoming session.
+        """
+        return next(
+            (
+                session.start
+                for session in self.upcomingSessions
+                if session.end > fromTime and session.start > fromTime
+            ),
+            inf,
         )
+
+    def addManualSession(self, startTime: float, endTime: float) -> None:
+        self.upcomingSessions.append(Session(startTime, endTime, False))
+        # MutableSequence doesn't have a .sort() method
+        self.upcomingSessions[:] = sorted(self.upcomingSessions)
 
     def _endSessionWithRule(
         self, rule: SessionRule, session: Session
@@ -170,16 +196,35 @@ class ActiveSessionManager:
         """
         Something has changed; reschedule all the scheduled stuff.
         """
-        for sched in self._everythingScheduled:
+        # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
+        # state will be corrupted
+        self._everythingScheduled, toCancel = [], self._everythingScheduled[:]
+        for sched in toCancel:
             sched.cancel()
         for rule in self.rules:
+            self._everythingScheduled.append(sc := StatefulCancel())
+            repeatedly(
+                self._civilScheduler,
+                self._beginSessionWithRule(sc, rule),
+                rule.startRule(),
+            )
+
+        def startStaticSession() -> None:
+            # TODO: make sure it's … the same session? just generally clean up?
+            session = self.activeSession = self.upcomingSessions.pop(0)
+            self.previousSessions.append(session)
+
+        if self.upcomingSessions:
+            earliestSession = self.upcomingSessions[0]
             self._everythingScheduled.append(
-                self._async.repeatedly(
-                    self._scheduler,
-                    rule.startRule(),
-                    self._beginSessionWithRule(rule),
+                self._physicalScheduler.callAt(
+                    earliestSession.start,
+                    startStaticSession,
                 )
             )
+
+    # Implementation of observer protocol, for watching changes to the list of
+    # L{SessionRule} objects in C{self.rules}
 
     @contextmanager
     def added(self, key: object, new: object) -> Iterator[None]:
@@ -199,16 +244,36 @@ class ActiveSessionManager:
     def child(self, key: object) -> Changes[object, object]:
         return IgnoreChanges
 
+    # End observer protocol
+
     @classmethod
     def new(
         cls,
         observer: Observer,
-        scheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int],
-    ) -> ActiveSessionManager:
-        rules: ObservableList[SessionRule] = ObservableList(IgnoreChanges)
+        scheduler: Scheduler[float, Callable[[], None], int],
+        zone: ZoneInfo,
+        sessions: Iterable[Session] = (),
+        rules: Iterable[DailySessionRule] = (),
+    ) -> SessionManager:
+        if zone is None:
+            # zone = guessLocalZone()
+            zone = ZoneInfo("Etc/UTC")
+        dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
+        now = scheduler.now()
+        branchManager, dateScheduler = branch(scheduler, dateScale)
+        upcoming: ObservableList[Session] = ObservableList(IgnoreChanges)
+        previous: ObservableList[Session] = ObservableList(IgnoreChanges)
+        for session in sessions:
+            (upcoming if session.start < now else previous).append(session)
         self = cls(
-            None, observer, rules, scheduler, [], Async(TwistedAsyncDriver())
+            observer=observer,
+            upcomingSessions=upcoming,
+            previousSessions=previous,
+            rules=ObservableList(IgnoreChanges, list(rules)),
+            _physicalScheduler=scheduler,
+            _civilScheduler=dateScheduler,
         )
-        rules.observer = self
+        addObserver(self.rules, self)
+        addObserver(self.upcomingSessions, self)
         self._reschedule()
         return self

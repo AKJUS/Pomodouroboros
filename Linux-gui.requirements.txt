@@ -18,13 +18,13 @@ cryptography==46.0.3
     # via
     #   pyopenssl
     #   service-identity
-datetype==2025.10.9
+datetype==2025.11.30
     # via
     #   Pomodouroboros (pyproject.toml)
     #   fritter
 ewmh==0.1.6
     # via Pomodouroboros (pyproject.toml)
-fritter==0.0.9
+fritter==0.1.0
     # via Pomodouroboros (pyproject.toml)
 h2==4.3.0
     # via twisted
