@@ -467,6 +467,29 @@ class NexusTests(TestCase):
             self.testUI.actions,
         )
 
+    def test_activeSessionAndStorage(self) -> None:
+        """
+        If you serialize a nexus with an active session, then save and relaod
+        it without any time passing, the same session will still be active.
+        """
+        now = aware(datetime(2024, 5, 8, 11, tzinfo=TZ), ZoneInfo)
+        self.nexus.addManualSession(now.timestamp() + 5, now.timestamp() + 65)
+        self.nexus.advanceToTime(now.timestamp() + 6)
+        expectedSession = Session(
+            start=1715191205.0, end=1715191265.0, automatic=False
+        )
+        self.assertEqual(
+            self.nexus._sessionManager.activeSession,
+            expectedSession,
+        )
+        roundTripped = nexusFromJSON(
+            nexusToJSON(self.nexus), lambda nexus: self.nexus.userInterface
+        )
+        self.assertEqual(
+            roundTripped._sessionManager.activeSession,
+            expectedSession,
+        )
+
     def test_story(self) -> None:
         """
         Full story testing various features of a day of using Pomodouroboros.
