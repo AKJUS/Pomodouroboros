@@ -317,6 +317,15 @@ class Nexus:
             i for i in self._intentions if not i.completed and not i.abandoned
         ]
 
+    def _updateLastUpdate(self, newTime: float) -> None:
+        """
+        Update L{Nexus._lastUpdateTime} to C{newTime}, as well as running any
+        timed calls scheduled against L{Nexus._memDriver}.
+        """
+        self._lastUpdateTime = newTime
+        self._memDriver.advance(newTime - self._memDriver.now())
+
+
     def advanceToTime(self, newTime: float) -> None:
         """
         Advance to the epoch time given.
@@ -327,7 +336,6 @@ class Nexus:
         # (particularly important so tests can be exact).
         self.userInterface
 
-        self._memDriver.advance(newTime - self._memDriver.now())
 
         debug("begin advance from", self._lastUpdateTime, "to", newTime)
         earlyEvaluationSpecialCase = (
@@ -351,7 +359,7 @@ class Nexus:
                     # prompt just begin at the current time, not some point in the
                     # past where some reminder *might* have been appropriate.
                     oldTime = self._lastUpdateTime
-                    self._lastUpdateTime = newTime
+                    self._updateLastUpdate(newTime)
                     debug("interval None, update to real time", newTime)
                     if self._promptForStartWhenIdleInSession:
                         # If we are configured to prompt the user to get
@@ -373,7 +381,7 @@ class Nexus:
                                 )
                 case _:
                     if newTime >= currentInterval.endTime:
-                        self._lastUpdateTime = currentInterval.endTime
+                        self._updateLastUpdate(currentInterval.endTime)
 
                         if currentInterval.intervalType in {
                             GracePeriod.intervalType,
@@ -411,7 +419,7 @@ class Nexus:
                         # We're landing in the middle of an interval, so we need to
                         # update its progress.  If it's in the middle then we can
                         # move time all the way forward.
-                        self._lastUpdateTime = newTime
+                        self._updateLastUpdate(newTime)
                         elapsedWithinInterval = (
                             newTime - currentInterval.startTime
                         )
