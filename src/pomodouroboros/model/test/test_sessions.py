@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from contextlib import contextmanager
 from datetime import datetime, time
 from typing import Any, Callable, Iterator
@@ -22,6 +23,34 @@ testingRule = DailySessionRule(
 )
 
 
+@dataclass
+class Observe:
+    sessionChanges: list[tuple[object, object, object]] = field(
+        default_factory=list
+    )
+    extraneousChanges: list[tuple[str, object, object]] = field(
+        default_factory=list
+    )
+
+    @contextmanager
+    def added(self, key: object, new: object) -> Iterator[None]:
+        yield
+        self.extraneousChanges.append(("add", key, new))
+
+    @contextmanager
+    def removed(self, key: object, old: object) -> Iterator[None]:
+        yield
+        self.extraneousChanges.append(("remove", key, old))
+
+    @contextmanager
+    def changed(self, key: object, old: object, new: object) -> Iterator[None]:
+        yield
+        self.sessionChanges.append((key, old, new))
+
+    def child(self, key: object) -> Changes[Any, Any]:
+        return self
+
+
 class SessionStartEndSchedulingTests(TestCase):
     def test_observeScheduledSession(self) -> None:
         scheduler: Scheduler[float, Callable[[], None], int] = (
@@ -38,31 +67,9 @@ class SessionStartEndSchedulingTests(TestCase):
             aware(datetime(2023, 11, 7, 2, tzinfo=PT), ZoneInfo).timestamp()
             - memory.now()
         )
-        sessionChanges = []
-        extraneousChanges = []
+        observer = Observe()
 
-        class Observe:
-            @contextmanager
-            def added(self, key: object, new: object) -> Iterator[None]:
-                yield
-                extraneousChanges.append(("add", key, new))
-
-            @contextmanager
-            def removed(self, key: object, old: object) -> Iterator[None]:
-                yield
-                extraneousChanges.append(("remove", key, old))
-
-            @contextmanager
-            def changed(
-                self, key: object, old: object, new: object
-            ) -> Iterator[None]:
-                yield
-                sessionChanges.append((key, old, new))
-
-            def child(self, key: object) -> Changes[Any, Any]:
-                return self
-
-        asm = SessionManager.new(Observe(), scheduler, PT)
+        asm = SessionManager.new(observer, scheduler, PT)
         if 0:
             addObserver(asm, DebugChanges())
         asm.rules.append(testingRule)
@@ -78,7 +85,7 @@ class SessionStartEndSchedulingTests(TestCase):
             start=desiredStart, end=desiredEnd, automatic=True
         )
         self.assertEqual(
-            sessionChanges,
+            observer.sessionChanges,
             [
                 ("activeSession", None, expectedSession),
                 ("activeSession", expectedSession, None),
@@ -95,5 +102,8 @@ class SessionStartEndSchedulingTests(TestCase):
                 "rules",
                 [expectedRule],
             ),
-            extraneousChanges,
+            observer.extraneousChanges,
         )
+
+    def observeManualSession(self) -> None:
+        pass
