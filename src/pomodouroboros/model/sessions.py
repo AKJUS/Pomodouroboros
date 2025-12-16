@@ -180,9 +180,17 @@ class SessionManager:
         )
 
     def addManualSession(self, startTime: float, endTime: float) -> None:
-        self.upcomingSessions.append(Session(startTime, endTime, False))
-        # MutableSequence doesn't have a .sort() method
-        self.upcomingSessions[:] = sorted(self.upcomingSessions)
+        newSession = Session(startTime, endTime, False)
+        from bisect import bisect
+
+        location = bisect(
+            self.upcomingSessions,
+            newSession.start,
+            0,
+            None,
+            key=lambda session: session.start,
+        )
+        self.upcomingSessions.insert(location, newSession)
 
     def _endSessionWithRule(
         self, rule: SessionRule, session: Session
