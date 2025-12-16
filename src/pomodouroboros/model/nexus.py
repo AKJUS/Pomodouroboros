@@ -517,15 +517,6 @@ class Nexus:
                 # and build that new interval.
                 self.advanceToTime(self._lastUpdateTime)
 
-    _lastSessionCheck: float = 0.0
-    """
-    The time at which we last checked to see if we have a new automatic session
-    to create.
-
-    TODO: include me in the persistence, so we don't forget, or find some
-    better timestamp to hang this logic on
-    """
-
     def _intervalJustEnded(self) -> None:
         """
         An interval just ended, specifically because its endTime elapsed.
