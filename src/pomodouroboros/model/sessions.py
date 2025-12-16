@@ -285,12 +285,15 @@ class SessionManager:
         upcoming: ObservableList[Session] = ObservableList(IgnoreChanges)
         previous: ObservableList[Session] = ObservableList(IgnoreChanges)
         for session in sessions:
-            (upcoming if session.start < now else previous).append(session)
+            (upcoming if session.start > now else previous).append(session)
+        active: Session | None
+        active = previous[0] if previous and previous[0].end > now else None
         self = cls(
             observer=observer,
             upcomingSessions=upcoming,
             previousSessions=previous,
             rules=ObservableList(IgnoreChanges, list(rules)),
+            activeSession=active,
             _physicalScheduler=scheduler,
             _civilScheduler=dateScheduler,
         )

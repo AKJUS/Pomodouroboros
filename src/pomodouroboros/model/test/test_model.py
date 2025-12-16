@@ -479,15 +479,15 @@ class NexusTests(TestCase):
             start=1715191205.0, end=1715191265.0, automatic=False
         )
         self.assertEqual(
-            self.nexus._sessionManager.activeSession,
             expectedSession,
+            self.nexus._sessionManager.activeSession,
         )
         roundTripped = nexusFromJSON(
             nexusToJSON(self.nexus), lambda nexus: self.nexus.userInterface
         )
         self.assertEqual(
-            roundTripped._sessionManager.activeSession,
             expectedSession,
+            roundTripped._sessionManager.activeSession,
         )
 
     def test_story(self) -> None:
