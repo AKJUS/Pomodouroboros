@@ -127,6 +127,34 @@ class StatefulCancel:
         self._state = state
 
 
+@dataclass
+class _SessionDependencyObserver:
+    name: str
+    manager: SessionManager
+    # Implementation of observer protocol, for watching changes to the list of
+    # L{SessionRule} objects in C{self.rules}
+
+    @contextmanager
+    def added(self, key: object, new: object) -> Iterator[None]:
+        yield
+        self.manager._reschedule((self.name, "added", key,new))
+
+    @contextmanager
+    def removed(self, key: object, old: object) -> Iterator[None]:
+        yield
+        self.manager._reschedule((self.name, "removed", key,old))
+
+    @contextmanager
+    def changed(self, key: object, old: object, new: object) -> Iterator[None]:
+        yield
+        self.manager._reschedule((self.name, "changed", key, old, new))
+
+    def child(self, key: object) -> Changes[object, object]:
+        return _SessionDependencyObserver(f"{self.name}.{key}", self.manager)
+
+    # End observer protocol
+
+
 @observable()
 class SessionManager:
     observer: Observer
@@ -158,11 +186,9 @@ class SessionManager:
             session = Session(
                 steps[-1].timestamp(), endSteps[0].timestamp(), True
             )
-            self._civilScheduler.callAt(
-                endSteps[0], self._endSessionWithRule(rule, session)
-            )
             self.activeSession = session
             self.previousSessions.append(session)
+            self._reschedule("rules-start")
 
         return work
 
@@ -192,17 +218,13 @@ class SessionManager:
         )
         self.upcomingSessions.insert(location, newSession)
 
-    def _endSessionWithRule(
-        self, rule: SessionRule, session: Session
-    ) -> Callable[[], None]:
-        def work() -> None:
-            self.activeSession = None
 
-        return work
-
-    def _reschedule(self) -> None:
+    def _reschedule(self, why: object) -> None:
         """
         Something has changed; reschedule all the scheduled stuff.
+
+        @param why: just for debugging, to see why ._reschedule() got called,
+            since there are many different places.
         """
         # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
         # state will be corrupted
@@ -217,12 +239,14 @@ class SessionManager:
                 rule.startRule(),
             )
 
-        def startStaticSession() -> None:
-            # TODO: make sure it's … the same session? just generally clean up?
-            session = self.activeSession = self.upcomingSessions.pop(0)
-            self.previousSessions.append(session)
-
         if self.upcomingSessions:
+
+            def startStaticSession() -> None:
+                # TODO: make sure it's … the same session? just generally clean up?
+                session = self.activeSession = self.upcomingSessions.pop(0)
+                self._reschedule("just-set-active")
+                self.previousSessions.append(session)
+
             earliestSession = self.upcomingSessions[0]
             self._everythingScheduled.append(
                 self._physicalScheduler.callAt(
@@ -231,28 +255,17 @@ class SessionManager:
                 )
             )
 
-    # Implementation of observer protocol, for watching changes to the list of
-    # L{SessionRule} objects in C{self.rules}
+        if self.activeSession is not None:
+            def endSession() -> None:
+                # end statically-scheduled session
+                self.activeSession = None
 
-    @contextmanager
-    def added(self, key: object, new: object) -> Iterator[None]:
-        yield
-        self._reschedule()
+            self._everythingScheduled.append(
+                ender := self._physicalScheduler.callAt(
+                    self.activeSession.end, endSession
+                ),
+            )
 
-    @contextmanager
-    def removed(self, key: object, old: object) -> Iterator[None]:
-        yield
-        self._reschedule()
-
-    @contextmanager
-    def changed(self, key: object, old: object, new: object) -> Iterator[None]:
-        yield
-        self._reschedule()
-
-    def child(self, key: object) -> Changes[object, object]:
-        return IgnoreChanges
-
-    # End observer protocol
 
     @classmethod
     def new(
@@ -281,7 +294,8 @@ class SessionManager:
             _physicalScheduler=scheduler,
             _civilScheduler=dateScheduler,
         )
-        addObserver(self.rules, self)
-        addObserver(self.upcomingSessions, self)
-        self._reschedule()
+        root = _SessionDependencyObserver("manager", self)
+        addObserver(self.rules, root.child("rules"))
+        addObserver(self.upcomingSessions, root.child("upcomingSessions"))
+        self._reschedule("new")
         return self

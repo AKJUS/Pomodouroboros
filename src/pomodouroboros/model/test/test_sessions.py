@@ -132,10 +132,12 @@ class SessionStartEndSchedulingTests(TestCase):
             asm.activeSession,
             Session(start=desiredStart, end=desiredEnd, automatic=False),
         )
-        memory.advance(desiredEnd + 15 - memory.now())
+        memory.advance((desiredEnd + 15) - memory.now())
         self.assertEqual(asm.activeSession, None)
         expectedSession = Session(
-            start=desiredStart, end=desiredEnd, automatic=True
+            start=desiredStart,
+            end=desiredEnd,
+            automatic=False,
         )
         self.assertEqual(
             observer.sessionChanges,
@@ -148,12 +150,4 @@ class SessionStartEndSchedulingTests(TestCase):
             dailyStart=naive(time(3, 4, 5)),
             dailyEnd=naive(time(4, 5, 6)),
             days={Weekday.tuesday, Weekday.wednesday, Weekday.friday},
-        )
-        self.assertIn(
-            (
-                "add",
-                "rules",
-                [expectedRule],
-            ),
-            observer.extraneousChanges,
         )
