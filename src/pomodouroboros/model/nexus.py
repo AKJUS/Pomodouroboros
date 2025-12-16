@@ -358,7 +358,6 @@ class Nexus:
                     # and we can skip forward to current time, and let the start
                     # prompt just begin at the current time, not some point in the
                     # past where some reminder *might* have been appropriate.
-                    oldTime = self._lastUpdateTime
                     self._updateLastUpdate(newTime)
                     debug("interval None, update to real time", newTime)
                     if self._promptForStartWhenIdleInSession:
