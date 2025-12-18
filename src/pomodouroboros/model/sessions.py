@@ -249,6 +249,7 @@ class SessionManager:
             _civilScheduler=dateScheduler,
         )
 
+        @Rescheduler
         def rulesSchedule() -> Iterable[Cancellable]:
             for rule in self.rules:
                 with StatefulCancel.create() as sc:
@@ -258,11 +259,9 @@ class SessionManager:
                         rule.startRule(),
                     )
                 yield sc
+        rulesSchedule.observe(self.rules, "rules")
 
-        reschedulers = []
-        reschedulers.append(rescheduler := Rescheduler(rulesSchedule))
-        rescheduler.observe(self.rules, "rules")
-
+        @Rescheduler
         def upcomingSchedule() -> Iterable[Cancellable]:
             if not self.upcomingSessions:
                 return
@@ -277,9 +276,9 @@ class SessionManager:
                 startStaticSession,
             )
 
-        reschedulers.append(rescheduler := Rescheduler(upcomingSchedule))
-        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
+        upcomingSchedule.observe(self.upcomingSessions, "upcomingSessions")
 
+        @Rescheduler
         def endSchedule() -> Iterable[Cancellable]:
             if self.activeSession is not None:
 
@@ -290,10 +289,8 @@ class SessionManager:
                     self.activeSession.end, endSession
                 )
 
-        reschedulers.append(rescheduler := Rescheduler(endSchedule))
         filter: Filter[str, object] = Filter("activeSession")
         addObserver(self, filter)
-        rescheduler.observe(filter, "self")
-        for each in reschedulers:
-            each.reschedule()
+        endSchedule.observe(filter, "self")
+
         return self

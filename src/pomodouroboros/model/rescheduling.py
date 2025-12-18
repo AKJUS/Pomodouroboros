@@ -21,7 +21,7 @@ class Rescheduler:
     scheduleCallback: Callable[[], Iterable[Cancellable]]
     _currentlyScheduled: list[Cancellable] = field(default_factory=list)
 
-    def reschedule(self, path: Sequence[object] = ()) -> None:
+    def _reschedule(self, path: Sequence[object] = ()) -> None:
         self._currentlyScheduled, toCancel = [], self._currentlyScheduled[:]
         for sched in toCancel:
             sched.cancel()
@@ -33,6 +33,7 @@ class Rescheduler:
 
     def observe(self, observable: object, path: str = "") -> None:
         addObserver(observable, self._observer(path))
+        self._reschedule()
 
     def _observer(self, path: str = "") -> Changes[object, object]:
         return _RescheduleObserver(self, path)
@@ -48,17 +49,17 @@ class _RescheduleObserver:
     @contextmanager
     def added(self, key: object, new: object) -> Iterator[None]:
         yield
-        self._rescheduler.reschedule((self._path, "added", key, new))
+        self._rescheduler._reschedule((self._path, "added", key, new))
 
     @contextmanager
     def removed(self, key: object, old: object) -> Iterator[None]:
         yield
-        self._rescheduler.reschedule((self._path, "removed", key, old))
+        self._rescheduler._reschedule((self._path, "removed", key, old))
 
     @contextmanager
     def changed(self, key: object, old: object, new: object) -> Iterator[None]:
         yield
-        self._rescheduler.reschedule((self._path, "changed", key, old, new))
+        self._rescheduler._reschedule((self._path, "changed", key, old, new))
 
     def child(self, key: object) -> Changes[object, object]:
         return _RescheduleObserver(self._rescheduler, f"{self._path}.{key}")
