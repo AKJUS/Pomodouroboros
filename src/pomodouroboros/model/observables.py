@@ -849,6 +849,51 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
     return make_observable
 
 
+@dataclass
+class Filter(Generic[Kcon, Vcon]):
+    """
+    Observe only a single key on an observable object.
+
+    Use like so::
+
+        observable = Something(someAttribute=...)
+        observer = SomeObserver()
+        observable.observer = Filter("someAttribute", observer)
+    """
+    key: Kcon
+    filtered: Changes[Kcon, Vcon] = IgnoreChanges
+    __observable_observer__: ClassVar[str] = "filtered"
+
+    @contextmanager
+    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.added(key, new):
+            yield
+
+    @contextmanager
+    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.removed(key, old):
+            yield
+
+    @contextmanager
+    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.added(key, new):
+            yield
+
+    def child(self, key: Kcon) -> Changes[Any, Any]:
+        if key != self.key:
+            return IgnoreChanges
+        return self.filtered.child(key)
+
+
 @dataclass(repr=False)
 class PathObserver(Generic[Vcon]):
     """

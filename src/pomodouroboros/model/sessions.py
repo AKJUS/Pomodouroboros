@@ -6,14 +6,14 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import IntEnum
-from math import inf
 from functools import cached_property
+from math import inf
 from typing import (
     TYPE_CHECKING,
     Callable,
     ContextManager,
-    Iterator,
     Iterable,
+    Iterator,
     Protocol,
     Sequence,
 )
@@ -36,12 +36,14 @@ from twisted.internet.defer import Deferred
 
 from pomodouroboros.model.observables import (
     Changes,
+    Filter,
     IgnoreChanges,
     ObservableList,
     Observer,
     observable,
 )
 
+from .observables import addObserver
 from .rescheduling import Rescheduler
 
 if TYPE_CHECKING:
@@ -218,36 +220,32 @@ class SessionManager:
         return createAndBeginRuleSession
 
     @cached_property
-    def _rescheduler(self) -> Rescheduler:
+    def _rulesRescheduler(self) -> Rescheduler:
         """
         Create the rescheduler and attach necessary observers for it to derive
         a current scheduler state.
         """
-        rescheduler = Rescheduler(self._toScheduled)
+
+        def rulesSchedule() -> Iterable[Cancellable]:
+            for rule in self.rules:
+                with StatefulCancel.create() as sc:
+                    repeatedly(
+                        self._civilScheduler,
+                        self._beginSessionWithRule(sc, rule),
+                        rule.startRule(),
+                    )
+                yield sc
+
+        rescheduler = Rescheduler(rulesSchedule)
         rescheduler.observe(self.rules, "rules")
-        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
         return rescheduler
 
-    def _toScheduled(self) -> Iterable[Cancellable]:
-        """
-        Re-derive all scheduled calls from the current state of this
-        L{SessionManager}.
-        """
-        for rule in self.rules:
-            with StatefulCancel.create() as sc:
-                repeatedly(
-                    self._civilScheduler,
-                    self._beginSessionWithRule(sc, rule),
-                    rule.startRule(),
-                )
-            yield sc
-
-        if self.upcomingSessions:
-
+    @cached_property
+    def _sessionsRescheduler(self) -> Rescheduler:
+        def upcomingSchedule() -> Iterable[Cancellable]:
             def startStaticSession() -> None:
                 # TODO: make sure it's … the same session? just generally clean up?
                 session = self.activeSession = self.upcomingSessions.pop(0)
-                self._rescheduler.reschedule(["just-set-active"])
                 self.previousSessions.append(session)
 
             earliestSession = self.upcomingSessions[0]
@@ -256,14 +254,27 @@ class SessionManager:
                 startStaticSession,
             )
 
-        if self.activeSession is not None:
+        rescheduler = Rescheduler(upcomingSchedule)
+        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
+        return rescheduler
 
-            def endSession() -> None:
-                self.activeSession = None
+    @cached_property
+    def _activeRescheduler(self) -> Rescheduler:
+        def endSchedule() -> Iterable[Cancellable]:
+            if self.activeSession is not None:
 
-            yield self._physicalScheduler.callAt(
-                self.activeSession.end, endSession
-            )
+                def endSession() -> None:
+                    self.activeSession = None
+
+                yield self._physicalScheduler.callAt(
+                    self.activeSession.end, endSession
+                )
+
+        rescheduler = Rescheduler(endSchedule)
+        filter: Filter[str, object] = Filter("activeSession")
+        addObserver(self, filter)
+        rescheduler.observe(filter, "self")
+        return rescheduler
 
     @classmethod
     def new(
@@ -295,5 +306,4 @@ class SessionManager:
             _physicalScheduler=scheduler,
             _civilScheduler=dateScheduler,
         )
-        self._rescheduler.reschedule("new")
         return self
