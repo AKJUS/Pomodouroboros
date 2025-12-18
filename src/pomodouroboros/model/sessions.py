@@ -40,8 +40,9 @@ from pomodouroboros.model.observables import (
     ObservableList,
     Observer,
     observable,
-    addObserver,
 )
+
+from .rescheduling import Rescheduler
 
 if TYPE_CHECKING:
     from .ideal import IdealScoreInfo
@@ -138,52 +139,6 @@ class StatefulCancel:
         ), "should be populated by the time the context is done"
 
 
-@dataclass
-class Rescheduler:
-    scheduleCallback: Callable[[], Iterable[Cancellable]]
-    _currentlyScheduled: list[Cancellable] = field(default_factory=list)
-
-    def reschedule(self, path: Sequence[object] = ()) -> None:
-        self._currentlyScheduled, toCancel = [], self._currentlyScheduled[:]
-        for sched in toCancel:
-            sched.cancel()
-            # TODO: better handling of reentrancy here; stop rescheduling if
-            # something interrupts us midway
-        for rescheduled in self.scheduleCallback():
-            self._currentlyScheduled.append(rescheduled)
-
-    def observer(self, path: str = "") -> Changes[object, object]:
-        return RescheduleObserver(self, path)
-
-
-@dataclass
-class RescheduleObserver:
-    _rescheduler: Rescheduler
-    _path: str = ""
-
-    # Implementation of observer protocol, for watching changes to the list of
-    # L{SessionRule} objects in C{self.rules}
-    @contextmanager
-    def added(self, key: object, new: object) -> Iterator[None]:
-        yield
-        self._rescheduler.reschedule((self._path, "added", key, new))
-
-    @contextmanager
-    def removed(self, key: object, old: object) -> Iterator[None]:
-        yield
-        self._rescheduler.reschedule((self._path, "removed", key, old))
-
-    @contextmanager
-    def changed(self, key: object, old: object, new: object) -> Iterator[None]:
-        yield
-        self._rescheduler.reschedule((self._path, "changed", key, old, new))
-
-    def child(self, key: object) -> Changes[object, object]:
-        return RescheduleObserver(self._rescheduler, f"{self._path}.{key}")
-
-    # End observer protocol
-
-
 MAX_SESSION_LENGTH = timedelta(days=7)
 
 
@@ -269,10 +224,8 @@ class SessionManager:
         a current scheduler state.
         """
         rescheduler = Rescheduler(self._toScheduled)
-        addObserver(self.rules, rescheduler.observer("rules"))
-        addObserver(
-            self.upcomingSessions, rescheduler.observer("upcomingSessions")
-        )
+        rescheduler.observe(self.rules, "rules")
+        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
         return rescheduler
 
     def _toScheduled(self) -> Iterable[Cancellable]:
