@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import IntEnum
-from functools import cached_property
 from math import inf
 from typing import (
     TYPE_CHECKING,
@@ -219,63 +218,6 @@ class SessionManager:
 
         return createAndBeginRuleSession
 
-    @cached_property
-    def _rulesRescheduler(self) -> Rescheduler:
-        """
-        Create the rescheduler and attach necessary observers for it to derive
-        a current scheduler state.
-        """
-
-        def rulesSchedule() -> Iterable[Cancellable]:
-            for rule in self.rules:
-                with StatefulCancel.create() as sc:
-                    repeatedly(
-                        self._civilScheduler,
-                        self._beginSessionWithRule(sc, rule),
-                        rule.startRule(),
-                    )
-                yield sc
-
-        rescheduler = Rescheduler(rulesSchedule)
-        rescheduler.observe(self.rules, "rules")
-        return rescheduler
-
-    @cached_property
-    def _sessionsRescheduler(self) -> Rescheduler:
-        def upcomingSchedule() -> Iterable[Cancellable]:
-            def startStaticSession() -> None:
-                # TODO: make sure it's … the same session? just generally clean up?
-                session = self.activeSession = self.upcomingSessions.pop(0)
-                self.previousSessions.append(session)
-
-            earliestSession = self.upcomingSessions[0]
-            yield self._physicalScheduler.callAt(
-                earliestSession.start,
-                startStaticSession,
-            )
-
-        rescheduler = Rescheduler(upcomingSchedule)
-        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
-        return rescheduler
-
-    @cached_property
-    def _activeRescheduler(self) -> Rescheduler:
-        def endSchedule() -> Iterable[Cancellable]:
-            if self.activeSession is not None:
-
-                def endSession() -> None:
-                    self.activeSession = None
-
-                yield self._physicalScheduler.callAt(
-                    self.activeSession.end, endSession
-                )
-
-        rescheduler = Rescheduler(endSchedule)
-        filter: Filter[str, object] = Filter("activeSession")
-        addObserver(self, filter)
-        rescheduler.observe(filter, "self")
-        return rescheduler
-
     @classmethod
     def new(
         cls,
@@ -306,4 +248,52 @@ class SessionManager:
             _physicalScheduler=scheduler,
             _civilScheduler=dateScheduler,
         )
+
+        def rulesSchedule() -> Iterable[Cancellable]:
+            for rule in self.rules:
+                with StatefulCancel.create() as sc:
+                    repeatedly(
+                        self._civilScheduler,
+                        self._beginSessionWithRule(sc, rule),
+                        rule.startRule(),
+                    )
+                yield sc
+
+        reschedulers = []
+        reschedulers.append(rescheduler := Rescheduler(rulesSchedule))
+        rescheduler.observe(self.rules, "rules")
+
+        def upcomingSchedule() -> Iterable[Cancellable]:
+            if not self.upcomingSessions:
+                return
+            def startStaticSession() -> None:
+                # TODO: make sure it's … the same session? just generally clean up?
+                session = self.activeSession = self.upcomingSessions.pop(0)
+                self.previousSessions.append(session)
+
+            earliestSession = self.upcomingSessions[0]
+            yield self._physicalScheduler.callAt(
+                earliestSession.start,
+                startStaticSession,
+            )
+
+        reschedulers.append(rescheduler := Rescheduler(upcomingSchedule))
+        rescheduler.observe(self.upcomingSessions, "upcomingSessions")
+
+        def endSchedule() -> Iterable[Cancellable]:
+            if self.activeSession is not None:
+
+                def endSession() -> None:
+                    self.activeSession = None
+
+                yield self._physicalScheduler.callAt(
+                    self.activeSession.end, endSession
+                )
+
+        reschedulers.append(rescheduler := Rescheduler(endSchedule))
+        filter: Filter[str, object] = Filter("activeSession")
+        addObserver(self, filter)
+        rescheduler.observe(filter, "self")
+        for each in reschedulers:
+            each.reschedule()
         return self

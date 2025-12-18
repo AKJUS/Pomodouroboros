@@ -360,6 +360,14 @@ def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
     )
     # okay now we need to descend down the observables hierarchy
     for k, v in observable.__class__.__dict__.items():
+        # FIXME: addObserver can be called in a property which means that you
+        # can be in the middle of initializing it and then hit another cached
+        # property which will then go back around to the first cached property
+        # and add another observer. basically: not safe to call addObserver
+        # anywhere under getattr() as you may well end up in an infinite loop
+        # because this will call through to EVERY other attribute.  we should
+        # have guard rails in here to avoid annoying infinite recursion
+        # debugging
         subservable = getattr(observable, k, None)
         subprop = _ObserverProperty.of(subservable)
         if subprop is not None:
