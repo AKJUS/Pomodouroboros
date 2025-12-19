@@ -159,19 +159,6 @@ class Nexus:
 
     _lastUpdateTime: float = field(default=0.0)
 
-    """
-    I want to put the nexus into a state where there is always an active
-    interval, always scheduled against _scheduler to do something upon its end.
-    One way to do this is to force the caller to pass in a _scheduler *and* a
-    current interval, then make the 'front door' construction a classmethod
-    that builds this for us.  Which should be fine, because there are only a
-    few call sites for constructing a nexus, even the tests only have a single
-    one in setUp.
-
-    So how do we compute the initial active interval?  Very much like
-    _activeInterval currently does.  We can refer to the scheduler's now()
-    rather than lastUpdateTime.
-    """
 
     def _newIdleInterval(self) -> Idle:
         nextSessionTime = self._sessionManager.upcomingSessionStartTime(
@@ -345,6 +332,36 @@ class Nexus:
             # last update time exactly, we need to process a loop update
             # because the timer at the end of the interval has moved.
         )
+        """
+        how do we create the expected upcoming timers from the data in the data
+        model?
+
+            - there's a timer for when to create the next start-prompt, which
+              should exist when we are idle but there should be a session
+              starting up, and we also are _promptForStartWhenIdleInSession
+
+            - there's a timer for transitioning to the next interval whenever
+              any interval is running, derived from the end time of that
+              interval.  I think it would be good to move this into a method on
+              the interval itself if possible
+
+                - genericaly this should handle adding to the current streak,
+                  except for Idle?
+
+                - this should handle starting a new grace period when breaks
+                  expire (hopefully custom logic in method on L{Break})
+
+                - this handles breaking the streak when grace periods expire
+                  (grace period -> start prompt); hopefully custom logic in
+                  method on L{GracePeriod}
+
+                - this also handles the transition from pomodoro to break;
+                  hopefully custom logic in method on L{Pomodoro}
+
+            - there's a heartbeat timer (which is the thing that *calls*
+              advanceToTime now, I think?) to call intervalProgress every so
+              often, as long as the current interval is not None
+        """
         while self._lastUpdateTime < newTime or earlyEvaluationSpecialCase:
             earlyEvaluationSpecialCase = False
             newInterval: AnyStreakInterval | None = None
