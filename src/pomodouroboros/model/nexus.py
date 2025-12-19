@@ -538,21 +538,24 @@ class Nexus:
 
         if time is actually passing then::
 
-            Idle->StartPrompt
-            StartPrompt->new StartPrompt  # if there's more time left in the session
+            Idle ->enterSession-> StartPrompt
 
-            StartPrompt->Idle       # when the session expires mid-startprompt
+            StartPrompt ->expired-> new StartPrompt  # if there's more time left in the session
+
+            StartPrompt ->exitSession-> Idle       # when the session expires mid-startprompt
                                     # (it feels like this isn't actually possible,
                                     # due to the way it's calculated? session-end
                                     # will always be an inflection point?)
 
-            Pomodoro->Break         # when pomodoro done
-            Break->StartPrompt      # when break done
+            Pomodoro ->ended-> Break         # when pomodoro done
+
+            Break ->ended-> StartPrompt      # when break done
 
             # due to user actions,
-            StartPrompt->Pomodoro   # set intention explicitly
-            GracePeriod->Pomodoro   # set intention to continue streak
-            Pomodoro->Break         # evaluate pomodoro early
+            StartPrompt ->setIntention-> Pomodoro   # set intention explicitly
+            GracePeriod ->setIntention-> Pomodoro   # set intention to continue streak
+
+            Pomodoro ->currentEvaluated-> Break         # evaluate pomodoro early
 
         What do we do?
         """
