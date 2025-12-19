@@ -198,7 +198,6 @@ class NexusTests(TestCase):
             driver,
             self.testUI.setIt,
             0,
-            Idle(0.0, inf),
             _sessionManager=SessionManager.new(IgnoreChanges, sched, TZ),
         )
 

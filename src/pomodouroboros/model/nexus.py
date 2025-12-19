@@ -110,14 +110,6 @@ class Nexus:
     created.
     """
 
-    _liveInterval: AnyIntervalOrIdle
-    """
-    The current interval that is executing.
-
-    XXX this is the mutable replacement for _activeInterval, named differently
-    while implementing so as to avoid confusion
-    """
-
     _sessionManager: SessionManager
     """
     The manager of and creator of session objects.
@@ -213,7 +205,6 @@ class Nexus:
             _lastIntentionID=1000,
             _interfaceFactory=_noUIFactory,
             _userInterface=_theNoUserInterface,
-            _liveInterval=currentInterval,
             _sessionManager=SessionManager.new(
                 IgnoreChanges,
                 sched,

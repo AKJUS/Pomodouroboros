@@ -166,7 +166,6 @@ def nexusFromJSON(
         _currentStreak=currentStreak,
         _interfaceFactory=userInterfaceFactory,
         _lastUpdateTime=lastUpdateTime,
-        _liveInterval=Idle(0, inf),
         _sessionManager=SessionManager.new(
             IgnoreChanges,
             scheduler,
@@ -360,7 +359,6 @@ def loadDefaultNexus(
         return loaded
     # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
     # interval
-    currentInterval = Idle(startTime=0.0, endTime=inf)
     sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
         driver := MemoryDriver()
     )
@@ -369,7 +367,6 @@ def loadDefaultNexus(
         driver,
         userInterfaceFactory,
         0,
-        _liveInterval=currentInterval,
         _sessionManager=SessionManager.new(IgnoreChanges, sched, guessLocalZone()),
     )
 
