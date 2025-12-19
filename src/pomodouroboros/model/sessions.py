@@ -226,9 +226,6 @@ class SessionManager:
         sessions: Iterable[Session] = (),
         rules: Iterable[DailySessionRule] = (),
     ) -> SessionManager:
-        if zone is None:
-            # zone = guessLocalZone()
-            zone = ZoneInfo("Etc/UTC")
         dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
         now = scheduler.now()
         branchManager, dateScheduler = branch(scheduler, dateScale)
