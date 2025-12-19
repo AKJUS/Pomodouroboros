@@ -230,7 +230,7 @@ class Nexus:
             _sessionManager=SessionManager.new(
                 IgnoreChanges,
                 sched,
-                self._sessionManager._civilScheduler.now().tzinfo,
+                self._sessionManager.zone,
             ),
         )
 

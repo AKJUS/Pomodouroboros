@@ -149,8 +149,7 @@ class SessionManager:
     upcomingSessions: ObservableList[Session]
     previousSessions: ObservableList[Session]
     rules: ObservableList[DailySessionRule]
-    _physicalScheduler: Scheduler[float, Callable[[], None], int]
-    _civilScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+    zone: ZoneInfo
     activeSession: Session | None = None
 
     def upcomingSessionStartTime(self, fromTime: float) -> float:
@@ -244,9 +243,8 @@ class SessionManager:
             upcomingSessions=upcoming,
             previousSessions=previous,
             rules=ObservableList(IgnoreChanges, list(rules)),
+            zone=zone,
             activeSession=active,
-            _physicalScheduler=scheduler,
-            _civilScheduler=dateScheduler,
         )
 
         @Rescheduler
@@ -254,7 +252,7 @@ class SessionManager:
             for rule in self.rules:
                 with StatefulCancel.create() as sc:
                     repeatedly(
-                        self._civilScheduler,
+                        dateScheduler,
                         self._beginSessionWithRule(sc, rule),
                         rule.startRule(),
                     )
@@ -271,7 +269,7 @@ class SessionManager:
                 self.previousSessions.append(session)
 
             earliestSession = self.upcomingSessions[0]
-            yield self._physicalScheduler.callAt(
+            yield scheduler.callAt(
                 earliestSession.start,
                 startStaticSession,
             )
@@ -285,7 +283,7 @@ class SessionManager:
                 def endSession() -> None:
                     self.activeSession = None
 
-                yield self._physicalScheduler.callAt(
+                yield scheduler.callAt(
                     self.activeSession.end, endSession
                 )
 
