@@ -99,7 +99,7 @@ class Break:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        return self
+        assert 0, "implement Break.buildNextInterval"
 
 
 @dataclass
@@ -161,7 +161,7 @@ class GracePeriod:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        return self  # FIXME
+        assert 0, "implement GracePeriod.buildNextInterval"
 
     @property
     def endTime(self) -> float:
@@ -203,8 +203,7 @@ class StartPrompt:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        # FIXME
-        return self
+        assert 0, "implement StartPrompt.buildNextInterval"
 
     @property
     def pointsLost(self) -> float:
@@ -237,7 +236,7 @@ class Idle:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        return self  # FIXME
+        assert 0, "implement Idle.buildNextInterval"
 
     def scoreEvents(self) -> Iterable[ScoreEvent]:
         return ()

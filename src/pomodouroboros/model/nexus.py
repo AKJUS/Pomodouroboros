@@ -168,11 +168,15 @@ class Nexus:
 
     def __post_init__(self) -> None:
         def endInterval() -> None:
-            self.currentInterval = self.currentInterval.buildNextInterval(
+            debug("ending interval", self.currentInterval)
+            newInterval = self.currentInterval.buildNextInterval(
                 self,
                 self._sessionManager.activeSession,
                 self._upcomingDurations,
             )
+            debug("starting new interval", newInterval)
+            self.currentInterval = newInterval
+            debug("new interval started")
 
         @Rescheduler
         def intervalEndSchedule() -> Iterable[Cancellable]:
@@ -194,8 +198,11 @@ class Nexus:
         ) -> None:
             debug("***START NEW INTERVAL", newInterval)
             self._currentStreak.append(newInterval)
+            debug("***intervalStart UI")
             self.userInterface.intervalStart(newInterval)
+            debug("***intervalProgress UI")
             self.userInterface.intervalProgress(0.0)
+            debug("done with new interval start")
 
         @dataclass
         class AfterChanger:
@@ -420,7 +427,7 @@ class Nexus:
             )
             intention.pomodoros.append(newPomodoro)
             debug("assigning the pomodoro")
-            self.activeInterval = newPomodoro
+            self.currentInterval = newPomodoro
             debug("assigned")
 
         debug("invoking handleStartPom on", self.currentInterval)
