@@ -1,21 +1,27 @@
-# -*- test-case-name: pomodouroboros.model.test -*-
-from __future__ import annotations
+
 
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from math import inf
-from typing import Callable, Iterable, Iterator, MutableSequence, Sequence
+from typing import Any, Callable, Iterable, Iterator, MutableSequence, Sequence
 from zoneinfo import ZoneInfo
 
-from datetype import aware, DateTime
-from fritter.boundaries import ScheduledCall, Scheduler, PhysicalScheduler
-from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone, DateScale
+from datetype import DateTime, aware
+from fritter.boundaries import (
+    Cancellable,
+    PhysicalScheduler,
+    ScheduledCall,
+    Scheduler,
+)
+from fritter.drivers.datetimes import DateScale, DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.twisted import TwistedTimeDriver
 from fritter.scheduler import schedulerFromDriver
-from fritter.tree import branch, Scale, BranchManager
+from fritter.tree import BranchManager, Scale, branch
+
+from pomodouroboros.model.observables import Filter
 
 from .boundaries import (
     EvaluationResult,
@@ -39,11 +45,19 @@ from .intervals import (
     Pomodoro,
     StartPrompt,
 )
-from .observables import Changes, IgnoreChanges, ObservableList
+from .observables import (
+    Changes,
+    IgnoreChanges,
+    ObservableList,
+    Observer,
+    addObserver,
+    observable,
+)
+from .rescheduling import Rescheduler
 from .sessions import (
-    SessionManager,
     DailySessionRule,
     Session,
+    SessionManager,
 )
 
 
@@ -91,7 +105,7 @@ def intervalOverlap(
     )
 
 
-@dataclass
+@observable()
 class Nexus:
     """
     Nexus where all the models of the user's ongoing pomodoro experience are
@@ -133,8 +147,6 @@ class Nexus:
     and pomodoros are.
     """
 
-    # TODO: there should be other types of rules via DailySessionRule
-
     _previousStreaks: list[list[AnyStreakInterval]] = field(
         default_factory=list
     )
@@ -149,40 +161,101 @@ class Nexus:
     of session) during active sessions.
     """
 
-    _lastUpdateTime: float = field(default=0.0)
+    currentInterval: AnyIntervalOrIdle = field(
+        default_factory=lambda: Idle(0.0, inf)
+    )
+    observer: Observer = IgnoreChanges
 
+    def __post_init__(self) -> None:
+        def endInterval() -> None:
+            self.currentInterval = self.currentInterval.buildNextInterval(
+                self,
+                self._sessionManager.activeSession,
+                self._upcomingDurations,
+            )
 
-    def _newIdleInterval(self) -> Idle:
-        nextSessionTime = self._sessionManager.upcomingSessionStartTime(
-            self._lastUpdateTime
+        @Rescheduler
+        def intervalEndSchedule() -> Iterable[Cancellable]:
+            yield self._scheduler.callAt(
+                self.currentInterval.endTime, endInterval
+            )
+
+        def filtered(observee: object, name: str) -> Changes[str, object]:
+            filter: Filter[str, object] = Filter(name)
+            addObserver(observee, filter)
+            return filter
+
+        justCurrentInterval = filtered(self, "currentInterval")
+        intervalEndSchedule.observe(justCurrentInterval)
+
+        def startNewInterval(
+            oldInterval: AnyStreakInterval | None,
+            newInterval: AnyStreakInterval,
+        ) -> None:
+            debug("***START NEW INTERVAL", newInterval)
+            self._currentStreak.append(newInterval)
+            self.userInterface.intervalStart(newInterval)
+            self.userInterface.intervalProgress(0.0)
+
+        @dataclass
+        class AfterChanger:
+            change: Callable[[Any, Any], None]
+
+            @contextmanager
+            def added(self, key: str, new: Any) -> Iterator[None]:
+                yield
+                self.change(None, new)
+
+            @contextmanager
+            def changed(
+                self, key: str, old: object, new: Any
+            ) -> Iterator[None]:
+                yield
+                self.change(new, new)
+
+            @contextmanager
+            def removed(self, key: str, old: Any) -> Iterator[None]:
+                assert 0, "this should not be removed"
+                yield
+
+            def child(self, key: str) -> Changes[Any, Any]:
+                # TODO: should not actually ignore changes on sub-objects
+                return IgnoreChanges
+
+        def startNewSession(
+            oldSession: Session | None, newSession: Session
+        ) -> None:
+            if not isinstance(self.currentInterval, Idle):
+                debug("SESSION STARTING WHILE NOT IDLE", self.currentInterval)
+                return
+            debug("SESSION START CHECK!")
+            if self._promptForStartWhenIdleInSession and (
+                # If we are configured to prompt the user to get started
+                # when they're in a session, then compute an ideal score
+                # with which to prompt the user. (See cloneWithoutUI for
+                # implementation notes.)
+                newSession is not None
+                and (
+                    nextDrop := (
+                        scoreInfo := newSession.idealScoreFor(self)
+                    ).nextPointLoss
+                )
+                is not None
+            ):
+                debug("MAKING START PROMPT!n")
+                self.currentInterval = StartPrompt(
+                    newSession.start,
+                    nextDrop,
+                    scoreInfo.scoreBeforeLoss(),
+                    scoreInfo.scoreAfterLoss(),
+                )
+            debug("SESSION START CHECK COMPLETE")
+
+        addObserver(justCurrentInterval, AfterChanger(startNewInterval))
+        addObserver(
+            filtered(self._sessionManager, "activeSession"),
+            AfterChanger(startNewSession),
         )
-        return Idle(startTime=self._lastUpdateTime, endTime=nextSessionTime)
-
-    @property
-    def _activeInterval(self) -> AnyIntervalOrIdle:
-        if not self._currentStreak:
-            return self._newIdleInterval()
-
-        candidateInterval = self._currentStreak[-1]
-        now = self._lastUpdateTime
-
-        if now < candidateInterval.startTime:
-            # when would this happen? interval at the end of the current streak
-            # somehow has not started?
-            return self._newIdleInterval()
-
-        if now > candidateInterval.endTime:
-            # We've moved on past the end of the interval, so it is no longer
-            # active.  Note: this corner of the logic is extremely finicky,
-            # because evaluating the currently-executing pomodoro depends on it
-            # *remaining* the _activeInterval while doing advanceToTime at the
-            # current timestamp.  therefore '>=' would be incorrect here in an
-            # important way, even though these values are normally real time
-            # and therefore not meaningfully comparable on exact equality.
-            debug("active interval: now after end")
-            return self._newIdleInterval()
-        debug("active interval: yay:", candidateInterval)
-        return candidateInterval
 
     def blank(self) -> Nexus:
         """
@@ -193,9 +266,6 @@ class Nexus:
             duplication here, since we are "idle forever" before any data
             exists.
         """
-        # this is a new, blank nexus, so we can know that the active interval
-        # is going to be an Idle interval that goes forever.
-        currentInterval = Idle(startTime=0.0, endTime=inf)
         sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
             driver := MemoryDriver()
         )
@@ -248,7 +318,7 @@ class Nexus:
         if startTime is None:
             startTime = 0.0
         if endTime is None:
-            endTime = self._lastUpdateTime
+            endTime = self._scheduler.now()
         for intentionIndex, intention in enumerate(self._intentions):
             for event in intention.intentionScoreEvents(intentionIndex):
                 if startTime <= event.time and event.time <= endTime:
@@ -273,12 +343,14 @@ class Nexus:
             ui: UIEventListener = self._interfaceFactory(self)
             debug("creating user interface for the first time", ui)
             self._userInterface = ui
-            active = self._activeInterval
-            if active is not None:
+            if (active := self.currentInterval) is not None:
                 debug("UI reification interval start", active)
                 ui.intervalStart(active)
             else:
-                debug("UI reification but no interval running", self._streaks)
+                debug(
+                    "UI reification but no interval running",
+                    self._previousStreaks,
+                )
         return self._userInterface
 
     @property
@@ -295,157 +367,12 @@ class Nexus:
             i for i in self._intentions if not i.completed and not i.abandoned
         ]
 
-    def _updateLastUpdate(self, newTime: float) -> None:
-        """
-        Update L{Nexus._lastUpdateTime} to C{newTime}, as well as running any
-        timed calls scheduled against L{Nexus._memDriver}.
-        """
-        self._lastUpdateTime = newTime
-        self._memDriver.advance(newTime - self._memDriver.now())
-
     def advanceToTime(self, newTime: float) -> None:
         """
         Advance to the epoch time given.
         """
-        # ensure lazy user-interface is reified before we start updating so
-        # that notifications of interval starts happen in the correct order
-        # (particularly important so tests can be exact).
-        self.userInterface
-
-        debug("begin advance from", self._lastUpdateTime, "to", newTime)
-        earlyEvaluationSpecialCase = (
-            # if our current streak is not empty (i.e. we are continuing it)
-            self._currentStreak
-            # and the current end time happens to correspond *exactly* to the
-            # last update time
-            and self._currentStreak[-1].endTime == self._lastUpdateTime
-            # then even if the new time has not moved and we are still on the
-            # last update time exactly, we need to process a loop update
-            # because the timer at the end of the interval has moved.
-        )
-        """
-        how do we create the expected upcoming timers from the data in the data
-        model?
-
-            - there's a timer for when to create the next start-prompt, which
-              should exist when we are idle but there should be a session
-              starting up, and we also are _promptForStartWhenIdleInSession
-
-            - there's a timer for transitioning to the next interval whenever
-              any interval is running, derived from the end time of that
-              interval.  I think it would be good to move this into a method on
-              the interval itself if possible
-
-                - genericaly this should handle adding to the current streak,
-                  except for Idle?
-
-                - this should handle starting a new grace period when breaks
-                  expire (hopefully custom logic in method on L{Break})
-
-                - this handles breaking the streak when grace periods expire
-                  (grace period -> start prompt); hopefully custom logic in
-                  method on L{GracePeriod}
-
-                - this also handles the transition from pomodoro to break;
-                  hopefully custom logic in method on L{Pomodoro}
-
-            - there's a heartbeat timer (which is the thing that *calls*
-              advanceToTime now, I think?) to call intervalProgress every so
-              often, as long as the current interval is not None
-        """
-        while self._lastUpdateTime < newTime or earlyEvaluationSpecialCase:
-            earlyEvaluationSpecialCase = False
-            newInterval: AnyStreakInterval | None = None
-            currentInterval = self._activeInterval
-            if isinstance(currentInterval, Idle):
-                # If there's no current interval then there's nothing to end
-                # and we can skip forward to current time, and let the start
-                # prompt just begin at the current time, not some point in the
-                # past where some reminder *might* have been appropriate.
-                self._updateLastUpdate(newTime)
-                debug("interval None, update to real time", newTime)
-
-                if self._promptForStartWhenIdleInSession and (
-                    # If we are configured to prompt the user to get started
-                    # when they're in a session, then compute an ideal score
-                    # with which to prompt the user. (See cloneWithoutUI for
-                    # implementation notes.)
-                    (activeSession := self._sessionManager.activeSession)
-                    is not None
-                    and (
-                        nextDrop := (
-                            scoreInfo := activeSession.idealScoreFor(self)
-                        ).nextPointLoss
-                    )
-                    is not None
-                    and nextDrop > newTime
-                ):
-                    newInterval = StartPrompt(
-                        self._lastUpdateTime,
-                        nextDrop,
-                        scoreInfo.scoreBeforeLoss(),
-                        scoreInfo.scoreAfterLoss(),
-                    )
-            else:
-                if newTime >= currentInterval.endTime:
-                    self._updateLastUpdate(currentInterval.endTime)
-
-                    if currentInterval.intervalType in {
-                        GracePeriod.intervalType,
-                        StartPrompt.intervalType,
-                    }:
-                        # New streaks begin when grace periods expire.
-                        self._upcomingDurations = iter(())
-
-                    newDuration = next(self._upcomingDurations, None)
-                    self.userInterface.intervalProgress(1.0)
-                    self.userInterface.intervalEnd()
-                    # in this implementation, there is a missing test case:
-                    # if we fall off the end of the streak rule, and it's
-                    # time to issue another StartPrompt after the final
-                    # break (or, hypothetically, the final pomodoro if we
-                    # organize a streak rule like that) we just … won't.
-                    if newDuration is None:
-                        # XXX needs test coverage
-                        previous, self._currentStreak = (
-                            self._currentStreak,
-                            [],
-                        )
-                        assert (
-                            previous
-                        ), "rolling off the end of a streak but the streak is empty somehow"
-                        self._previousStreaks.append(previous)
-                    else:
-                        newInterval = preludeIntervalMap[
-                            newDuration.intervalType
-                        ](
-                            currentInterval.endTime,
-                            currentInterval.endTime + newDuration.seconds,
-                        )
-                else:
-                    # We're landing in the middle of an interval, so we need to
-                    # update its progress.  If it's in the middle then we can
-                    # move time all the way forward.
-                    self._updateLastUpdate(newTime)
-                    elapsedWithinInterval = newTime - currentInterval.startTime
-                    intervalDuration = (
-                        currentInterval.endTime - currentInterval.startTime
-                    )
-                    self.userInterface.intervalProgress(
-                        elapsedWithinInterval / intervalDuration
-                    )
-
-            # if we created a new interval for any reason on this iteration
-            # through the loop, then we need to mention that fact to the UI.
-            if newInterval is not None:
-                self._createdInterval(newInterval)
-                # should really be active now
-                assert self._activeInterval is newInterval
-
-    def _createdInterval(self, newInterval: AnyStreakInterval) -> None:
-        self._currentStreak.append(newInterval)
-        self.userInterface.intervalStart(newInterval)
-        self.userInterface.intervalProgress(0.0)
+        # self._memDriver.step(until=newTime)
+        self._memDriver.advance(newTime - self._memDriver.now())
 
     def addIntention(
         self,
@@ -458,18 +385,13 @@ class Nexus:
         """
         self._lastIntentionID += 1
         newID = self._lastIntentionID
+        now = self._scheduler.now()
         self._intentions.append(
-            newIntention := Intention(
-                newID,
-                self._lastUpdateTime,
-                self._lastUpdateTime,
-                title,
-                description,
-            )
+            newIntention := Intention(newID, now, now, title, description)
         )
         if estimate is not None:
             newIntention.estimates.append(
-                Estimate(duration=estimate, madeAt=self._lastUpdateTime)
+                Estimate(duration=estimate, madeAt=now)
             )
         return newIntention
 
@@ -487,6 +409,7 @@ class Nexus:
         """
 
         def startPom(startTime: float, endTime: float) -> None:
+            debug("actually starting the pomodoro")
             newPomodoro = Pomodoro(
                 intention=intention,
                 indexInStreak=sum(
@@ -496,68 +419,18 @@ class Nexus:
                 endTime=endTime,
             )
             intention.pomodoros.append(newPomodoro)
-            self._createdInterval(newPomodoro)
+            debug("assigning the pomodoro")
+            self.activeInterval = newPomodoro
+            debug("assigned")
 
-        return self._activeInterval.handleStartPom(self, startPom)
+        debug("invoking handleStartPom on", self.currentInterval)
+        return self.currentInterval.handleStartPom(self, startPom)
 
     def evaluatePomodoro(
         self, pomodoro: Pomodoro, result: EvaluationResult
     ) -> None:
         """
         The user has determined the success criteria.
-        """
-        timestamp = self._lastUpdateTime
-        pomodoro.evaluation = Evaluation(result, timestamp)
-        if result == EvaluationResult.achieved:
-            assert (
-                pomodoro.intention.completed
-            ), "evaluation was set, should be complete"
-            if timestamp < pomodoro.endTime:
-                # We evaluated the pomodoro as *complete* early, which is a
-                # special case.  Evaluating it in other ways allows it to
-                # continue.  (Might want an 'are you sure' in the UI for this,
-                # since other evaluations can be reversed.)
-                assert pomodoro is (
-                    active := self._activeInterval
-                ), f"""
-                   the pomodoro {pomodoro} is not ended yet, but it is not the
-                   active interval {active}
-                   """
-                pomodoro.endTime = timestamp
-                # We now need to advance back to the current time since we've
-                # changed the landscape; there's a new interval that now starts
-                # there, and we need to emit our final progress notification
-                # and build that new interval.
-                self.advanceToTime(self._lastUpdateTime)
-
-    def _intervalJustEnded(self) -> None:
-        """
-        An interval just ended, specifically because its endTime elapsed.
-
-        Explicit user actions may also end an interval.
-
-        if time is actually passing then::
-
-            Idle ->enterSession-> StartPrompt
-
-            StartPrompt ->expired-> new StartPrompt  # if there's more time left in the session
-
-            StartPrompt ->exitSession-> Idle       # when the session expires mid-startprompt
-                                    # (it feels like this isn't actually possible,
-                                    # due to the way it's calculated? session-end
-                                    # will always be an inflection point?)
-
-            Pomodoro ->ended-> Break         # when pomodoro done
-
-            Break ->ended-> StartPrompt      # when break done
-
-            # due to user actions,
-            StartPrompt ->setIntention-> Pomodoro   # set intention explicitly
-            GracePeriod ->setIntention-> Pomodoro   # set intention to continue streak
-
-            Pomodoro ->currentEvaluated-> Break         # evaluate pomodoro early
-
-        What do we do?
         """
 
 

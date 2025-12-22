@@ -69,7 +69,7 @@ class TestUserInterface:
     Implementation of all UIEventListener protocols.
     """
 
-    theNexus: Nexus = field(init=False)
+    theNexus: Nexus = field(init=False, repr=False)
     clock: IReactorTime
     actions: list[TestInterval] = field(default_factory=list)
     actualInterval: TestInterval | None = None
@@ -211,7 +211,7 @@ class NexusTests(TestCase):
         now = self.clock.seconds()
         debug("test advancing model to", now)
         self.nexus.advanceToTime(now)
-        debug("model advanced", self.nexus._lastUpdateTime)
+        debug("model advanced", self.nexus._scheduler.now())
 
     def test_noPointsForNothing(self) -> None:
         """
@@ -424,6 +424,14 @@ class NexusTests(TestCase):
         # UI would
         self.assertEqual(
             self.nexus._sessionManager.previousSessions[:],
+
+            # Ok so the problem here is that previously session-creation was
+            # being done in advanceToTime and ... somehow avoiding creating
+            # more than one session even advancing from timestamp 0.  Now,
+            # we're accidentally creating a zillion sessions for all the days
+            # between.  We indeed *should* be skipping these, and this is fixed
+            # by using a continuous timer rather than a discrete one.
+
             [Session(start=1715185800.0, end=1715211900.0, automatic=True)],
         )
 
@@ -773,8 +781,8 @@ class NexusTests(TestCase):
         )
         self.maxDiff = 99999
         self.assertEqual(self.nexus._intentions, roundTrip._intentions)
-        self.assertEqual(self.nexus._activeInterval, roundTrip._activeInterval)
-        self.assertEqual(self.nexus._lastUpdateTime, roundTrip._lastUpdateTime)
+        self.assertEqual(self.nexus.currentInterval, roundTrip.currentInterval)
+        self.assertEqual(self.nexus._scheduler.now(), roundTrip._scheduler.now())
         self.assertEqual(
             list(self.nexus.cloneWithoutUI()._upcomingDurations),
             list(roundTrip.cloneWithoutUI()._upcomingDurations),

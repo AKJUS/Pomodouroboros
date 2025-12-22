@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, ClassVar, Iterable
+from math import inf
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Literal,
+)
 
 from .boundaries import (
     EvaluationResult,
@@ -11,6 +19,7 @@ from .boundaries import (
 )
 from .intention import Intention
 from .scoring import BreakCompleted, EvaluationScore, IntentionSet
+from .sessions import Session
 
 if TYPE_CHECKING:
     from .nexus import Nexus
@@ -23,8 +32,32 @@ class Duration:
     break or pomodoro) that will be generated in a continuing streak.
     """
 
-    intervalType: IntervalType
+    intervalType: Literal[IntervalType.Pomodoro] | Literal[IntervalType.Break]
     seconds: float
+
+    def buildNext(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        previous: AnyIntervalOrIdle,
+    ) -> AnyIntervalOrIdle:
+        startTime = previous.endTime
+        endTime = startTime + self.seconds
+        match self.intervalType:
+            case IntervalType.Pomodoro:
+                if session is not None:
+                    return GracePeriod(startTime, endTime)
+                else:
+                    # outside of a session, return to idle
+                    return Idle(
+                        startTime,
+                        nexus._sessionManager.upcomingSessionStartTime(
+                            startTime
+                        ),
+                    )
+
+            case IntervalType.Break:
+                return Break(startTime, endTime)
 
 
 @dataclass
@@ -60,6 +93,14 @@ class Break:
     ) -> PomStartResult:
         return PomStartResult.OnBreak
 
+    def buildNextInterval(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        durations: Iterator[Duration],
+    ) -> AnyIntervalOrIdle:
+        return self
+
 
 @dataclass
 class Pomodoro:
@@ -75,6 +116,17 @@ class Pomodoro:
 
     evaluation: Evaluation | None = None
     intervalType: ClassVar[IntervalType] = IntervalType.Pomodoro
+
+    def buildNextInterval(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        durations: Iterator[Duration],
+    ) -> AnyIntervalOrIdle:
+        duration = next(durations, None)
+        if duration is not None:
+            return duration.buildNext(nexus, session, self)
+        return Idle(self.endTime, float("inf"))
 
     def handleStartPom(
         self, nexus: Nexus, startPom: Callable[[float, float], None]
@@ -102,6 +154,14 @@ class GracePeriod:
     startTime: float
     originalPomEnd: float
     intervalType: ClassVar[IntervalType] = IntervalType.GracePeriod
+
+    def buildNextInterval(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        durations: Iterator[Duration],
+    ) -> AnyIntervalOrIdle:
+        return self  # FIXME
 
     @property
     def endTime(self) -> float:
@@ -137,6 +197,15 @@ class StartPrompt:
 
     intervalType: ClassVar[IntervalType] = IntervalType.StartPrompt
 
+    def buildNextInterval(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        durations: Iterator[Duration],
+    ) -> AnyIntervalOrIdle:
+        # FIXME
+        return self
+
     @property
     def pointsLost(self) -> float:
         """
@@ -155,11 +224,20 @@ class StartPrompt:
         nexus.userInterface.intervalEnd()
         return handleIdleStartPom(nexus, startPom)
 
+
 @dataclass
 class Idle:
     startTime: float
     endTime: float
     intervalType: ClassVar[IntervalType] = IntervalType.Idle
+
+    def buildNextInterval(
+        self,
+        nexus: Nexus,
+        session: Session | None,
+        durations: Iterator[Duration],
+    ) -> AnyIntervalOrIdle:
+        return self  # FIXME
 
     def scoreEvents(self) -> Iterable[ScoreEvent]:
         return ()
@@ -170,6 +248,7 @@ class Idle:
         nexus.userInterface.intervalProgress(1.0)
         nexus.userInterface.intervalEnd()
         return handleIdleStartPom(nexus, startPom)
+
 
 AnyStreakInterval = Pomodoro | Break | GracePeriod | StartPrompt
 """
@@ -202,8 +281,8 @@ def handleIdleStartPom(
         nextDuration.intervalType == IntervalType.Pomodoro
     ), "streak must begin with a pomodoro"
 
-    startTime = nexus._lastUpdateTime
-    endTime = nexus._lastUpdateTime + nextDuration.seconds
+    startTime = nexus._scheduler.now()
+    endTime = nexus._scheduler.now() + nextDuration.seconds
 
     startPom(startTime, endTime)
     return PomStartResult.Started

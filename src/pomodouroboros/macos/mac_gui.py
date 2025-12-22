@@ -209,7 +209,7 @@ class MacUserInterface:
             nexus,
             makeMenuLabel(status.item.menu()),
             owner.intentionDataSource,
-            nexus._activeInterval,  # TODO: that seems wrong
+            nexus.currentInterval,  # TODO: we shouldn't need to pass this
         )
         self.setExplanation("Starting Up...")
         return self

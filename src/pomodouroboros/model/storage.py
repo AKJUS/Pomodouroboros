@@ -157,7 +157,12 @@ def nexusFromJSON(
         _upcomingDurations=iter(
             [
                 Duration(
-                    IntervalType(each["intervalType"]), seconds=each["seconds"]
+                    # FIXME: make a function which restricts IntervalType, fix
+                    # up the serialized dict to reflect that durations can only
+                    # be breaks & pomodoros
+
+                    IntervalType(each["intervalType"]),  # type:ignore[arg-type]
+                    seconds=each["seconds"],
                 )
                 for each in saved["upcomingDurations"]
             ]
@@ -165,7 +170,6 @@ def nexusFromJSON(
         _previousStreaks=previousStreaks,
         _currentStreak=currentStreak,
         _interfaceFactory=userInterfaceFactory,
-        _lastUpdateTime=lastUpdateTime,
         _sessionManager=SessionManager.new(
             IgnoreChanges,
             scheduler,
@@ -264,7 +268,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
             }
             for intention in nexus._intentions
         ],
-        "lastUpdateTime": nexus._lastUpdateTime,
+        "lastUpdateTime": nexus._scheduler.now(),
         "upcomingDurations": [
             {
                 "intervalType": duration.intervalType.value,
