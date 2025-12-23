@@ -156,6 +156,7 @@ class SessionManager:
         """
         Return the time of the next upcoming session.
         """
+        # FIXME: inspect upcoming rules as well!
         return next(
             (
                 session.start

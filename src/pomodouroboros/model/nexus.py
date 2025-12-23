@@ -1,5 +1,3 @@
-
-
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
@@ -249,7 +247,7 @@ class Nexus:
                 )
                 is not None
             ):
-                debug("MAKING START PROMPT!n")
+                debug("MAKING START PROMPT!")
                 self.currentInterval = StartPrompt(
                     newSession.start,
                     nextDrop,
@@ -380,6 +378,17 @@ class Nexus:
         """
         # self._memDriver.step(until=newTime)
         self._memDriver.advance(newTime - self._memDriver.now())
+        self.userInterface.intervalProgress(
+            (newTime - self.currentInterval.startTime)
+            / (self.currentInterval.endTime - self.currentInterval.startTime)
+        )
+
+    def endStreak(self) -> None:
+        """
+        The streak has ended.
+        """
+        previous, self._currentStreak = self._currentStreak, []
+        self._previousStreaks.append(previous)
 
     def addIntention(
         self,
@@ -439,9 +448,3 @@ class Nexus:
         """
         The user has determined the success criteria.
         """
-
-
-preludeIntervalMap: dict[IntervalType, type[GracePeriod | Break]] = {
-    Pomodoro.intervalType: GracePeriod,
-    Break.intervalType: Break,
-}

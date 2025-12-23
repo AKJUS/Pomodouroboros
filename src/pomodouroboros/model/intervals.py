@@ -99,7 +99,36 @@ class Break:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        assert 0, "implement Break.buildNextInterval"
+        return buildNextInStreak(self, nexus, session, durations)
+
+
+def buildNextInStreak(
+    streakInterval: Break | Pomodoro,
+    nexus: Nexus,
+    session: Session | None,
+    durations: Iterator[Duration],
+) -> AnyIntervalOrIdle:
+    newDuration = next(durations, None)
+    if newDuration is None:
+        nexus.endStreak()
+        now = nexus._scheduler.now()
+        if session is None:
+            return Idle(now, nexus._sessionManager.upcomingSessionStartTime(now))
+        else:
+            scoreInfo = session.idealScoreFor(nexus)
+            nextDrop = scoreInfo.nextPointLoss
+            return StartPrompt(
+                now,
+                nextDrop,
+                scoreInfo.scoreBeforeLoss(),
+                scoreInfo.scoreAfterLoss(),
+            )
+    else:
+        newIntentionType = preludeIntervalMap[newDuration.intervalType]
+        return newIntentionType(
+            streakInterval.endTime,
+            streakInterval.endTime + newDuration.seconds,
+        )
 
 
 @dataclass
@@ -147,8 +176,8 @@ class Pomodoro:
 @dataclass
 class GracePeriod:
     """
-    Interval where the user is taking some time to set the intention before the
-    next Pomodoro interval gets started.
+    Interval where the user is in a streak, but is taking some time to set the
+    intention before the next Pomodoro interval gets started.
     """
 
     startTime: float
@@ -285,3 +314,9 @@ def handleIdleStartPom(
 
     startPom(startTime, endTime)
     return PomStartResult.Started
+
+
+preludeIntervalMap: dict[IntervalType, type[GracePeriod | Break]] = {
+    Pomodoro.intervalType: GracePeriod,
+    Break.intervalType: Break,
+}

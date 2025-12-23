@@ -418,40 +418,41 @@ class NexusTests(TestCase):
             )
         )
         now = aware(datetime(2024, 5, 8, 11, tzinfo=TZ), ZoneInfo)
+        print(f"TIMESTAMP: {now.timestamp()}")
         self.nexus.advanceToTime(now.timestamp())
 
         # TODO: try to observe the creation of this session in the way that the
         # UI would
         self.assertEqual(
             self.nexus._sessionManager.previousSessions[:],
-
-            # Ok so the problem here is that previously session-creation was
-            # being done in advanceToTime and ... somehow avoiding creating
-            # more than one session even advancing from timestamp 0.  Now,
-            # we're accidentally creating a zillion sessions for all the days
-            # between.  We indeed *should* be skipping these, and this is fixed
-            # by using a continuous timer rather than a discrete one.
-
             [Session(start=1715185800.0, end=1715211900.0, automatic=True)],
         )
 
         # note that I definitely cheated a little bit with these data
         # structures and copied them out of the observed output of the code, I
         # didn't hand-calculate that it's 1500 seconds to the next score drop
-        promptStart = 1715191200.0
+        promptStart = 1715185800.0
+        assert (
+            promptStart == self.nexus._sessionManager.previousSessions[0].start
+        )
         promptStop = 1715192700.0
+        assert promptStop == now.timestamp() + 1500.0
+        expectedPrompt = StartPrompt(
+            startTime=promptStart,
+            endTime=promptStop,
+            pointsBeforeLoss=ANY,
+            pointsAfterLoss=ANY,
+        )
         self.assertEqual(
             [
                 TestInterval(
-                    interval=StartPrompt(
-                        startTime=promptStart,
-                        endTime=promptStop,
-                        pointsBeforeLoss=ANY,
-                        pointsAfterLoss=ANY,
-                    ),
+                    interval=expectedPrompt,
                     actualStartTime=0.0,
                     actualEndTime=None,
-                    currentProgress=[0.0],
+                    currentProgress=[
+                        0.0,
+                        ((90 * 60) / (promptStop - promptStart)),
+                    ],
                 )
             ],
             self.testUI.actions,
@@ -460,15 +461,14 @@ class NexusTests(TestCase):
         self.assertEqual(
             [
                 TestInterval(
-                    interval=StartPrompt(
-                        startTime=1715191200.0,
-                        endTime=1715192700.0,
-                        pointsBeforeLoss=ANY,
-                        pointsAfterLoss=ANY,
-                    ),
+                    interval=expectedPrompt,
                     actualStartTime=0.0,
                     actualEndTime=None,
-                    currentProgress=[0.0, (20 / (promptStop - promptStart))],
+                    currentProgress=[
+                        0.0,
+                        ((90 * 60) / (promptStop - promptStart)),
+                        ((20 + (90 * 60)) / (promptStop - promptStart)),
+                    ],
                 )
             ],
             self.testUI.actions,
@@ -782,7 +782,9 @@ class NexusTests(TestCase):
         self.maxDiff = 99999
         self.assertEqual(self.nexus._intentions, roundTrip._intentions)
         self.assertEqual(self.nexus.currentInterval, roundTrip.currentInterval)
-        self.assertEqual(self.nexus._scheduler.now(), roundTrip._scheduler.now())
+        self.assertEqual(
+            self.nexus._scheduler.now(), roundTrip._scheduler.now()
+        )
         self.assertEqual(
             list(self.nexus.cloneWithoutUI()._upcomingDurations),
             list(roundTrip.cloneWithoutUI()._upcomingDurations),

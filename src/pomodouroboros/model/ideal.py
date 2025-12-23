@@ -41,7 +41,7 @@ class IdealScoreInfo:
     sessionStart: float
     sessionEnd: float
     idealScoreNow: ScoreSummary
-    nextPointLoss: float | None
+    nextPointLoss: float
     idealScoreNext: ScoreSummary
     perfectScore: ScoreSummary
 
@@ -151,16 +151,16 @@ def idealScore(
             )
         )
     )
-    if not idealScoreNow:
-        return IdealScoreInfo(
-            now=workPeriodBegin,
-            idealScoreNow=ScoreSummary(idealScoreNow),
-            sessionStart=sessionStart,
-            sessionEnd=sessionEnd,
-            nextPointLoss=None,
-            idealScoreNext=ScoreSummary(idealScoreNow),
-            perfectScore=perfectSummary,
-        )
+    # if not idealScoreNow:
+    #     return IdealScoreInfo(
+    #         now=workPeriodBegin,
+    #         idealScoreNow=ScoreSummary(idealScoreNow),
+    #         sessionStart=sessionStart,
+    #         sessionEnd=sessionEnd,
+    #         nextPointLoss=None,
+    #         idealScoreNext=ScoreSummary(idealScoreNow),
+    #         perfectScore=perfectSummary,
+    #     )
     latestScoreTime = idealScoreNow[-1].time
     pointLossTime = workPeriodBegin + (sessionEnd - latestScoreTime)
     return IdealScoreInfo(
