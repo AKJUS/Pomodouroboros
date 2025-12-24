@@ -450,3 +450,19 @@ class Nexus:
         """
         The user has determined the success criteria.
         """
+        timestamp = self._scheduler.now()
+        pomodoro.evaluation = Evaluation(result, timestamp)
+        if result == EvaluationResult.achieved:
+            if timestamp < pomodoro.endTime:
+                assert pomodoro is (
+                    active := self.currentInterval
+                ), f"""
+                   the pomodoro {pomodoro} is not ended yet, but it is not the
+                   active interval {active}
+                   """
+                pomodoro.endTime = timestamp
+                self.currentInterval = pomodoro.buildNextInterval(
+                    self,
+                    self._sessionManager.activeSession,
+                    self._upcomingDurations,
+                )
