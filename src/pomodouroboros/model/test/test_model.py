@@ -265,14 +265,16 @@ class NexusTests(TestCase):
         self.advanceTime(100.0)  # 297
         self.advanceTime(103.0)  # 300
 
+        secondPromptEnd = 1700.
+
         self.assertEqual(
             [
                 TestInterval(
                     interval=StartPrompt(
                         startTime=sessionStart,
                         endTime=startPromptEnd,
-                        pointsBeforeLoss=10.0,
-                        pointsAfterLoss=4,
+                        pointsBeforeLoss=21.25,
+                        pointsAfterLoss=15.25,
                     ),
                     actualStartTime=1100.0,
                     actualEndTime=1402.0,
@@ -299,16 +301,16 @@ class NexusTests(TestCase):
                 TestInterval(
                     interval=StartPrompt(
                         startTime=startPromptEnd,
-                        endTime=sessionEnd,
-                        pointsBeforeLoss=4,
-                        pointsAfterLoss=0,
+                        endTime=secondPromptEnd,
+                        pointsBeforeLoss=15.25,
+                        pointsAfterLoss=4,
                     ),
                     actualStartTime=1402.0,
                     actualEndTime=None,
                     currentProgress=[
                         0.0,
-                        (2.0 / (sessionEnd - startPromptEnd)),  # 297
-                        (105.0 / (sessionEnd - startPromptEnd)),  # 300
+                        (2.0 / (sessionEnd - secondPromptEnd)),  # 297
+                        (105.0 / (sessionEnd - secondPromptEnd)),  # 300
                     ],
                 ),
             ],
