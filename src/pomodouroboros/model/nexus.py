@@ -167,6 +167,8 @@ class Nexus:
     def __post_init__(self) -> None:
         def endInterval() -> None:
             debug("ending interval", self.currentInterval)
+            self.userInterface.intervalProgress(1.0)
+            self.userInterface.intervalEnd()
             newInterval = self.currentInterval.buildNextInterval(
                 self,
                 self._sessionManager.activeSession,
@@ -198,9 +200,9 @@ class Nexus:
             self._currentStreak.append(newInterval)
             debug("***intervalStart UI")
             self.userInterface.intervalStart(newInterval)
-            debug("***intervalProgress UI")
+            # debug("***intervalProgress UI")
             self.userInterface.intervalProgress(0.0)
-            debug("done with new interval start")
+            # debug("done with new interval start")
 
         @dataclass
         class AfterChanger:

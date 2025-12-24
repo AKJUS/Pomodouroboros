@@ -113,7 +113,9 @@ def buildNextInStreak(
         nexus.endStreak()
         now = nexus._scheduler.now()
         if session is None:
-            return Idle(now, nexus._sessionManager.upcomingSessionStartTime(now))
+            return Idle(
+                now, nexus._sessionManager.upcomingSessionStartTime(now)
+            )
         else:
             scoreInfo = session.idealScoreFor(nexus)
             nextDrop = scoreInfo.nextPointLoss
@@ -232,7 +234,22 @@ class StartPrompt:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        assert 0, "implement StartPrompt.buildNextInterval"
+        # refactor with startNewSession
+        if session is None:
+            return Idle(
+                self.endTime,
+                nexus._sessionManager.upcomingSessionStartTime(
+                    nexus._scheduler.now()
+                ),
+            )
+        else:
+            idealScore = session.idealScoreFor(nexus)
+            return StartPrompt(
+                self.endTime,
+                idealScore.nextPointLoss,
+                idealScore.scoreBeforeLoss(),
+                idealScore.scoreAfterLoss(),
+            )
 
     @property
     def pointsLost(self) -> float:

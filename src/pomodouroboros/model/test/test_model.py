@@ -250,51 +250,66 @@ class NexusTests(TestCase):
         When the user has a session started, they will receive notifications
         telling them about decreases to their potential maximum score.
         """
-        sessionStart = 1000
+        sessionStart = 1000.0
+        sessionEnd = 2000.0
+        startPromptEnd = 1400.0
         realTimeStartDelay = 100.0
-        self.nexus.addManualSession(sessionStart, 2000)
+        self.nexus.addManualSession(sessionStart, sessionEnd)
         self.advanceTime(sessionStart + realTimeStartDelay)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(197.0)
-        self.advanceTime(100.0)
-        self.advanceTime(103.0)
+        self.advanceTime(1.0)  # 1
+        self.advanceTime(1.0)  # 2
+        self.advanceTime(1.0)  # 3
+        self.advanceTime(1.0)  # 4
+        self.advanceTime(1.0)  # 5
+        self.advanceTime(197.0)  # 197
+        self.advanceTime(100.0)  # 297
+        self.advanceTime(103.0)  # 300
 
         self.assertEqual(
             [
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1100.0,
-                        endTime=1400.0,
-                        pointsBeforeLoss=21.25,
-                        pointsAfterLoss=15.25,
+                        startTime=sessionStart,
+                        endTime=startPromptEnd,
+                        pointsBeforeLoss=10.0,
+                        pointsAfterLoss=4,
                     ),
                     actualStartTime=1100.0,
                     actualEndTime=1402.0,
                     currentProgress=[
                         0.0,
-                        0.0033333333333333335,
-                        0.006666666666666667,
-                        0.01,
-                        0.013333333333333334,
-                        0.016666666666666666,
-                        0.6733333333333333,
+                        realTimeStartPct := (
+                            realTimeStartDelay
+                            / (startPromptEnd - sessionStart)
+                        ),
+                        realTimeStartPct
+                        + (
+                            increment := (
+                                1.0 / (startPromptEnd - sessionStart)
+                            )
+                        ),  # 1
+                        realTimeStartPct + (increment * 2),  # 2
+                        realTimeStartPct + (increment * 3),  # 3
+                        realTimeStartPct + (increment * 4),  # 4
+                        realTimeStartPct + (increment * 5),  # 5
+                        realTimeStartPct + (increment * (197.0 + 5)),  # 197
                         1.0,
                     ],
                 ),
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1402.0,
-                        endTime=1700.0,
-                        pointsBeforeLoss=15.25,
-                        pointsAfterLoss=4.0,
+                        startTime=startPromptEnd,
+                        endTime=sessionEnd,
+                        pointsBeforeLoss=4,
+                        pointsAfterLoss=0,
                     ),
                     actualStartTime=1402.0,
                     actualEndTime=None,
-                    currentProgress=[0.0, 0.34563758389261745],
+                    currentProgress=[
+                        0.0,
+                        (2.0 / (sessionEnd - startPromptEnd)),  # 297
+                        (105.0 / (sessionEnd - startPromptEnd)),  # 300
+                    ],
                 ),
             ],
             self.testUI.actions,
@@ -309,6 +324,7 @@ class NexusTests(TestCase):
         intention = self.nexus.addIntention("x")
         self.nexus.addManualSession(1000, 2000)
         self.advanceTime(100)  # no-op; time before session
+        self.assertEqual([], self.testUI.actions)
         self.advanceTime(1000)  # enter session
         self.advanceTime(50)  # time in session before pomodoro
         self.nexus.startPomodoro(intention)
@@ -317,16 +333,17 @@ class NexusTests(TestCase):
             [
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1100.0,
+                        startTime=1000.0,
                         endTime=1400.0,
-                        pointsBeforeLoss=21.25,
-                        pointsAfterLoss=15.25,
+                        pointsBeforeLoss=10.0,
+                        pointsAfterLoss=4,
                     ),
                     actualStartTime=1100.0,
                     actualEndTime=1150.0,
                     currentProgress=[
                         0.0,
-                        50.0 / 300.0,
+                        100 / 400.0,
+                        150 / 400.0,
                         1.0,
                     ],
                 ),
@@ -351,7 +368,7 @@ class NexusTests(TestCase):
     def test_idealScore(self) -> None:
         """
         The ideal score should be the best sequence of events that the user
-        could execute.
+        could execute over a given potential work session.
         """
         self.advanceTime(1000)
         ideal1 = idealScore(self.nexus, 1000.0, 2000.0)
@@ -367,8 +384,8 @@ class NexusTests(TestCase):
         )
         self.advanceTime(1600)
         ideal2 = idealScore(self.nexus, 1000.0, 2000.0)
-        self.assertEqual(ideal2.nextPointLoss, None)
         self.assertEqual(ideal2.pointsLost(), 0.0)
+        self.assertEqual(ideal2.nextPointLoss, 2600.0)
         # The perfect score is the same as the ideal score at the very
         # beginning of the session.
         self.assertEqual(
@@ -380,7 +397,6 @@ class NexusTests(TestCase):
         If you advance to exactly the boundary between pomodoro and break it
         should work ok.
         """
-
         self.advanceTime(5.0)
         i = self.nexus.addIntention("i")
         self.nexus.startPomodoro(i)
@@ -397,7 +413,8 @@ class NexusTests(TestCase):
                     Break(5 + 5.0 * 60, 5 + (5 * 60.0 * 2)),
                     actualStartTime=5 + 5.0 * 60,
                     actualEndTime=None,
-                    currentProgress=[0.0],
+                    # once reported by startNewInterval, once by advanceToTime
+                    currentProgress=[0.0, 0.0],
                 ),
             ],
             self.testUI.actions,

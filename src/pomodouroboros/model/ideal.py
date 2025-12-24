@@ -128,11 +128,12 @@ def idealScore(
     nexus: Nexus, sessionStart: float, sessionEnd: float
 ) -> IdealScoreInfo:
     """
-    Compute the inflection point for the ideal score the user might achieve.
-    We present two hypothetical futures: one where the user executes perfectly
-    from the current update time of the given C{Nexus} to C{sessionEnd}, and
-    the other where they wait exactly long enough to lose I{one} element of
-    that perfect score, and then begin executing perfectly.
+    Compute the inflection point for the ideal score the user might achieve in
+    a session with the given start and end times.  We present two hypothetical
+    futures: one where the user executes perfectly from the current update time
+    of the given C{Nexus} to C{sessionEnd}, and the other where they wait
+    exactly long enough to lose I{one} element of that perfect score, and then
+    begin executing perfectly.
     """
     debug("ideal future 1")
     workPeriodBegin = nexus._scheduler.now()
@@ -151,18 +152,9 @@ def idealScore(
             )
         )
     )
-    # if not idealScoreNow:
-    #     return IdealScoreInfo(
-    #         now=workPeriodBegin,
-    #         idealScoreNow=ScoreSummary(idealScoreNow),
-    #         sessionStart=sessionStart,
-    #         sessionEnd=sessionEnd,
-    #         nextPointLoss=None,
-    #         idealScoreNext=ScoreSummary(idealScoreNow),
-    #         perfectScore=perfectSummary,
-    #     )
-    latestScoreTime = idealScoreNow[-1].time
+    latestScoreTime = idealScoreNow[-1].time if idealScoreNow else sessionEnd
     pointLossTime = workPeriodBegin + (sessionEnd - latestScoreTime)
+    debug("pointLossTime", pointLossTime, workPeriodBegin)
     return IdealScoreInfo(
         now=nexus._scheduler.now(),
         idealScoreNow=ScoreSummary(idealScoreNow),
