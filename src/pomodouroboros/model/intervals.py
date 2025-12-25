@@ -102,6 +102,22 @@ class Break:
         return buildNextInStreak(self, nexus, session, durations)
 
 
+def idleOrPrompt(nexus: Nexus, session: Session | None) -> Idle | StartPrompt:
+    nexus.endStreak()
+    now = nexus._scheduler.now()
+    if session is None:
+        return Idle(now, nexus._sessionManager.upcomingSessionStartTime(now))
+    else:
+        scoreInfo = session.idealScoreFor(nexus)
+        nextDrop = scoreInfo.nextPointLoss
+        return StartPrompt(
+            now,
+            nextDrop,
+            scoreInfo.scoreBeforeLoss(),
+            scoreInfo.scoreAfterLoss(),
+        )
+
+
 def buildNextInStreak(
     streakInterval: Break | Pomodoro,
     nexus: Nexus,
@@ -110,21 +126,7 @@ def buildNextInStreak(
 ) -> AnyIntervalOrIdle:
     newDuration = next(durations, None)
     if newDuration is None:
-        nexus.endStreak()
-        now = nexus._scheduler.now()
-        if session is None:
-            return Idle(
-                now, nexus._sessionManager.upcomingSessionStartTime(now)
-            )
-        else:
-            scoreInfo = session.idealScoreFor(nexus)
-            nextDrop = scoreInfo.nextPointLoss
-            return StartPrompt(
-                now,
-                nextDrop,
-                scoreInfo.scoreBeforeLoss(),
-                scoreInfo.scoreAfterLoss(),
-            )
+        return idleOrPrompt(nexus, session)
     else:
         newIntentionType = preludeIntervalMap[newDuration.intervalType]
         return newIntentionType(
@@ -192,7 +194,8 @@ class GracePeriod:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        assert 0, "implement GracePeriod.buildNextInterval"
+        # grace period expired, time to break the streak.
+        return idleOrPrompt(nexus, session)
 
     @property
     def endTime(self) -> float:
