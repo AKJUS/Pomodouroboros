@@ -893,7 +893,7 @@ class Filter(Generic[Kcon, Vcon]):
         if key != self.key:
             yield
             return
-        with self.filtered.added(key, new):
+        with self.filtered.changed(key, old, new):
             yield
 
     def child(self, key: Kcon) -> Changes[Any, Any]:
