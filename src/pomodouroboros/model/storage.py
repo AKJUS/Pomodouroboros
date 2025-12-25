@@ -205,7 +205,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
         """
         Save any interval to its paired JSON data structure.
         """
-        raise TypeError("unsupported type")
+        raise TypeError(f"unsupported type: {interval}")
 
     @saveInterval.register(Pomodoro)
     def savePomodoro(interval: Pomodoro) -> SavedPomodoro:
