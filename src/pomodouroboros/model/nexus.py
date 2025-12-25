@@ -165,24 +165,25 @@ class Nexus:
     )
     observer: Observer = IgnoreChanges
 
+    def endInterval(self) -> None:
+        debug("ending interval", self.currentInterval)
+        self.userInterface.intervalProgress(1.0)
+        self.userInterface.intervalEnd()
+        newInterval = self.currentInterval.buildNextInterval(
+            self,
+            self._sessionManager.activeSession,
+            self._upcomingDurations,
+        )
+        debug("starting new interval", newInterval)
+        self.currentInterval = newInterval
+        debug("new interval started")
+
     def __post_init__(self) -> None:
-        def endInterval() -> None:
-            debug("ending interval", self.currentInterval)
-            self.userInterface.intervalProgress(1.0)
-            self.userInterface.intervalEnd()
-            newInterval = self.currentInterval.buildNextInterval(
-                self,
-                self._sessionManager.activeSession,
-                self._upcomingDurations,
-            )
-            debug("starting new interval", newInterval)
-            self.currentInterval = newInterval
-            debug("new interval started")
 
         @Rescheduler
         def intervalEndSchedule() -> Iterable[Cancellable]:
             yield self._scheduler.callAt(
-                self.currentInterval.endTime, endInterval
+                self.currentInterval.endTime, self.endInterval
             )
 
         def filtered(observee: object, name: str) -> Changes[str, object]:
@@ -194,11 +195,15 @@ class Nexus:
         intervalEndSchedule.observe(justCurrentInterval)
 
         def startNewInterval(
-            oldInterval: AnyStreakInterval | None,
-            newInterval: AnyStreakInterval,
+            oldInterval: AnyIntervalOrIdle | None,
+            newInterval: AnyIntervalOrIdle,
         ) -> None:
-            debug("***START NEW INTERVAL", newInterval)
-            self._currentStreak.append(newInterval)
+            if oldInterval is newInterval:
+                debug("early-exit restarting interval")
+                return
+            debug("***START NEW INTERVAL", newInterval, "from", oldInterval)
+            if not isinstance(newInterval, Idle):
+                self._currentStreak.append(newInterval)
             debug("***intervalStart UI")
             self.userInterface.intervalStart(newInterval)
             # debug("***intervalProgress UI")
@@ -211,6 +216,7 @@ class Nexus:
 
             @contextmanager
             def added(self, key: str, new: Any) -> Iterator[None]:
+                debug("added!")
                 yield
                 self.change(None, new)
 
@@ -218,8 +224,9 @@ class Nexus:
             def changed(
                 self, key: str, old: object, new: Any
             ) -> Iterator[None]:
+                debug("changed!")
                 yield
-                self.change(new, new)
+                self.change(old, new)
 
             @contextmanager
             def removed(self, key: str, old: Any) -> Iterator[None]:
@@ -462,8 +469,6 @@ class Nexus:
                    active interval {active}
                    """
                 pomodoro.endTime = timestamp
-                self.currentInterval = pomodoro.buildNextInterval(
-                    self,
-                    self._sessionManager.activeSession,
-                    self._upcomingDurations,
-                )
+                # nb: endInterval assigns the new interval which cancels the
+                # interval-end timer so we won't double-end
+                self.endInterval()
