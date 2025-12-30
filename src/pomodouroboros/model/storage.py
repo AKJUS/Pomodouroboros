@@ -25,12 +25,14 @@ from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
 from .intervals import (
     AnyStreakInterval,
+    AnyIntervalOrIdle,
     Break,
     Duration,
     Evaluation,
     GracePeriod,
     Pomodoro,
     StartPrompt,
+    idleOrPrompt,
 )
 from .nexus import Nexus
 from .observables import IgnoreChanges, ObservableList
@@ -47,7 +49,9 @@ from .sessions import Session, SessionManager
 
 
 def nexusFromJSON(
-    saved: SavedNexus, userInterfaceFactory: UserInterfaceFactory
+    saved: SavedNexus,
+    userInterfaceFactory: UserInterfaceFactory,
+    issueStartPrompts: bool = True,
 ) -> Nexus:
     """
     Load a Pomodouroboros Nexus from its saved serialized state.
@@ -160,8 +164,9 @@ def nexusFromJSON(
                     # FIXME: make a function which restricts IntervalType, fix
                     # up the serialized dict to reflect that durations can only
                     # be breaks & pomodoros
-
-                    IntervalType(each["intervalType"]),  # type:ignore[arg-type]
+                    IntervalType(
+                        each["intervalType"]
+                    ),  # type:ignore[arg-type]
                     seconds=each["seconds"],
                 )
                 for each in saved["upcomingDurations"]
@@ -177,6 +182,30 @@ def nexusFromJSON(
             sessions,
             sessionRules,
         ),
+        # need to deserialize current interval; none-interval means recompute
+        # an appropriate idle
+        _promptForStartWhenIdleInSession=issueStartPrompts,
+    )
+    # FIXME: it may be easier to understand to just persist the current
+    # interval explicitly and then load it blindly again rather than rederiving
+    # it.  Note however that this would mean maintaining a shared mutable
+    # reference because ._currentStreak and .currentInterval *must* share a
+    # common mutable interval object for (for example) early-evaluation of
+    # pomodoros, and any other edits
+    nexus.currentInterval = (
+        # if we're in a streak then it's the last thing in the streak
+        currentStreak[-1]
+        if currentStreak and lastUpdateTime < currentStreak[-1].endTime
+        else
+        # If we're in a session (but *not* a streak as that would be caught
+        # above), it's time to prompt
+        idleOrPrompt(
+            nexus,
+            it := nexus._sessionManager.activeSession,
+            # FIXME: this is definitely wrong, the correct reference time here
+            # would be the end of the streak time
+            it.start if it is not None else lastUpdateTime,
+        )
     )
     return nexus
 
@@ -371,7 +400,9 @@ def loadDefaultNexus(
         driver,
         userInterfaceFactory,
         0,
-        _sessionManager=SessionManager.new(IgnoreChanges, sched, guessLocalZone()),
+        _sessionManager=SessionManager.new(
+            IgnoreChanges, sched, guessLocalZone()
+        ),
     )
 
 

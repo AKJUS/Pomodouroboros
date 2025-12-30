@@ -103,6 +103,8 @@ def idealFuture(
             # immediately start a pomodoro.
 
             intention = newPlaceholder()
+            # TODO: we need to be exactly estimating every intention to get
+            # maximum points.
             startResult = hypothetical.startPomodoro(intention)
             assert startResult in {
                 PomStartResult.Started,
@@ -119,8 +121,17 @@ def idealFuture(
                 hypothetical.evaluatePomodoro(
                     workingInterval, EvaluationResult.achieved
                 )
-            # TODO: we need to be exactly estimating every intention to get
-            # maximum points.
+        else:
+
+            # this should not advance past the end of a session, because
+            # there's the big inequality up at the top there about the end of
+            # the session.  thus each iteration through here we should be
+            # getting a GracePeriod or an Idle if we're just getting started,
+            # in which case will always unconditionally immediately start a
+            # pomodoro; otherwise, we get a Break or a Pomodoro.  under no
+            # circumstances should we be able to see a StartPrompt here.
+
+            assert False, f"bad interval type: {workingInterval}"
     return hypothetical
 
 

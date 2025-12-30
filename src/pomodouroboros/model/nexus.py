@@ -43,6 +43,7 @@ from .intervals import (
     Idle,
     Pomodoro,
     StartPrompt,
+    idleOrPrompt,
 )
 from .observables import (
     Changes,
@@ -202,7 +203,14 @@ class Nexus:
                 debug("early-exit restarting interval")
                 return
             debug("***START NEW INTERVAL", newInterval, "from", oldInterval)
-            if not isinstance(newInterval, Idle):
+            if (not isinstance(newInterval, Idle)) and (
+                # a bit of a hack here to avoid the case where, when
+                # deserializing, we need to mutate the current streak interval
+                # to point at the interval as it currently is, when it is
+                # initialized to an Idle by default
+                self._currentStreak[-1:]
+                != [newInterval]
+            ):
                 self._currentStreak.append(newInterval)
             debug("***intervalStart UI")
             self.userInterface.intervalStart(newInterval)
@@ -243,28 +251,9 @@ class Nexus:
             if not isinstance(self.currentInterval, Idle):
                 debug("SESSION STARTING WHILE NOT IDLE", self.currentInterval)
                 return
-            debug("SESSION START CHECK!")
-            if self._promptForStartWhenIdleInSession and (
-                # If we are configured to prompt the user to get started
-                # when they're in a session, then compute an ideal score
-                # with which to prompt the user. (See cloneWithoutUI for
-                # implementation notes.)
-                newSession is not None
-                and (
-                    nextDrop := (
-                        scoreInfo := newSession.idealScoreFor(self)
-                    ).nextPointLoss
-                )
-                is not None
-            ):
-                debug("MAKING START PROMPT!")
-                self.currentInterval = StartPrompt(
-                    newSession.start,
-                    nextDrop,
-                    scoreInfo.scoreBeforeLoss(),
-                    scoreInfo.scoreAfterLoss(),
-                )
-            debug("SESSION START CHECK COMPLETE")
+            self.currentInterval = idleOrPrompt(
+                self, newSession, newSession.start
+            )
 
         addObserver(justCurrentInterval, AfterChanger(startNewInterval))
         addObserver(
@@ -305,12 +294,11 @@ class Nexus:
         debug("constructing hypothetical")
         from .storage import nexusFromJSON, nexusToJSON
 
-        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory)
+        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory, False)
         # Given that we are creating this hypothetical future to determine when
         # to emit our next start prompt, configure it such that advancing its
         # timeline will not recursively attempt to perform the same
         # computation.
-        hypothetical._promptForStartWhenIdleInSession = False
         debug("constructed")
         return hypothetical
 

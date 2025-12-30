@@ -437,7 +437,6 @@ class NexusTests(TestCase):
             )
         )
         now = aware(datetime(2024, 5, 8, 11, tzinfo=TZ), ZoneInfo)
-        print(f"TIMESTAMP: {now.timestamp()}")
         self.nexus.advanceToTime(now.timestamp())
 
         # TODO: try to observe the creation of this session in the way that the
@@ -800,6 +799,16 @@ class NexusTests(TestCase):
         )
         self.maxDiff = 99999
         self.assertEqual(self.nexus._intentions, roundTrip._intentions)
+
+        # The interval is not currently round-tripping because previously we
+        # were relying on advanceToTime to always set the current interval to
+        # some derivation from the active or previous streak; the attribute
+        # itself used to be computed.  But now, the current interval is a
+        # mutable attribute, which it more or less needs to be in order for the
+        # UI to be able to observe it. the default interval upon construction
+        # is now an Idle, but we are expecting a Nexus in the middle of a
+        # Pomodoro.
+
         self.assertEqual(self.nexus.currentInterval, roundTrip.currentInterval)
         self.assertEqual(
             self.nexus._scheduler.now(), roundTrip._scheduler.now()

@@ -49,12 +49,7 @@ class Duration:
                     return GracePeriod(startTime, endTime)
                 else:
                     # outside of a session, return to idle
-                    return Idle(
-                        startTime,
-                        nexus._sessionManager.upcomingSessionStartTime(
-                            startTime
-                        ),
-                    )
+                    return Idle.fromNexus(nexus, startTime)
 
             case IntervalType.Break:
                 return Break(startTime, endTime)
@@ -102,16 +97,21 @@ class Break:
         return buildNextInStreak(self, nexus, session, durations)
 
 
-def idleOrPrompt(nexus: Nexus, session: Session | None) -> Idle | StartPrompt:
+def idleOrPrompt(nexus: Nexus, session: Session | None, referenceTime: float) -> Idle | StartPrompt:
+    """
+    We have rolled off the end of a streak or a grace period, and it's time to
+    start prompting the user to start a new streak with a StartPrompt, or to go
+    back to idle with an Idle.
+    """
     nexus.endStreak()
-    now = nexus._scheduler.now()
-    if session is None:
-        return Idle(now, nexus._sessionManager.upcomingSessionStartTime(now))
+    # now = nexus._scheduler.now()
+    if session is None or not nexus._promptForStartWhenIdleInSession:
+        return Idle.fromNexus(nexus, referenceTime)
     else:
         scoreInfo = session.idealScoreFor(nexus)
         nextDrop = scoreInfo.nextPointLoss
         return StartPrompt(
-            now,
+            referenceTime,
             nextDrop,
             scoreInfo.scoreBeforeLoss(),
             scoreInfo.scoreAfterLoss(),
@@ -126,7 +126,7 @@ def buildNextInStreak(
 ) -> AnyIntervalOrIdle:
     newDuration = next(durations, None)
     if newDuration is None:
-        return idleOrPrompt(nexus, session)
+        return idleOrPrompt(nexus, session, streakInterval.endTime)
     else:
         newIntentionType = preludeIntervalMap[newDuration.intervalType]
         return newIntentionType(
@@ -159,7 +159,9 @@ class Pomodoro:
         duration = next(durations, None)
         if duration is not None:
             return duration.buildNext(nexus, session, self)
-        return Idle(self.endTime, float("inf"))
+        # FIXME: INCORRECT!  if the streak runs out in a session, we need to
+        # cycle back around to the beginning?
+        return Idle.fromNexus(nexus, self.endTime)
 
     def handleStartPom(
         self, nexus: Nexus, startPom: Callable[[float, float], None]
@@ -195,16 +197,26 @@ class GracePeriod:
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
         # grace period expired, time to break the streak.
-        return idleOrPrompt(nexus, session)
+        return idleOrPrompt(nexus, session, self.endTime)
 
     @property
     def endTime(self) -> float:
         """
         Compute the end time from the grace period.
+
+        This is the time at which the grace period itself ends (and, if it
+        elapses, when we will break the streak), in contrast to
+        C{originalPomEnd}, the time at which the L{Pomodoro} interval for which
+        this L{GracePeriod} is temporarily standing in will end if an intention
+        is set.
         """
         return self.startTime + ((self.originalPomEnd - self.startTime) / 3)
 
     def scoreEvents(self) -> Iterable[ScoreEvent]:
+        """
+        A L{GracePeriod} awards no points for anything; the hope is that it
+        will be replaced by a pomodoro.
+        """
         return ()
 
     def handleStartPom(
@@ -238,21 +250,7 @@ class StartPrompt:
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
         # refactor with startNewSession
-        if session is None:
-            return Idle(
-                self.endTime,
-                nexus._sessionManager.upcomingSessionStartTime(
-                    nexus._scheduler.now()
-                ),
-            )
-        else:
-            idealScore = session.idealScoreFor(nexus)
-            return StartPrompt(
-                self.endTime,
-                idealScore.nextPointLoss,
-                idealScore.scoreBeforeLoss(),
-                idealScore.scoreAfterLoss(),
-            )
+        return idleOrPrompt(nexus, session, self.endTime)
 
     @property
     def pointsLost(self) -> float:
@@ -278,6 +276,13 @@ class Idle:
     startTime: float
     endTime: float
     intervalType: ClassVar[IntervalType] = IntervalType.Idle
+
+    @classmethod
+    def fromNexus(cls, nexus: Nexus, timestamp: float) -> Idle:
+        return cls(
+            timestamp,
+            nexus._sessionManager.upcomingSessionStartTime(timestamp),
+        )
 
     def buildNextInterval(
         self,
