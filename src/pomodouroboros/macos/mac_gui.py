@@ -24,6 +24,7 @@ from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import LoopingCall
 
 from pomodouroboros.macos.progress_hud import PieTimer
+from pomodouroboros.model.intervals import Idle
 
 from ..model.debugger import debug
 from ..model.intention import Estimate, Intention
@@ -118,6 +119,10 @@ class MacUserInterface:
                     lightPurple,
                     darkPurple,
                 )
+            case Idle():
+                self.intentionDataSource.startingUnblocked()
+                self.setExplanation("Idle.")
+                self.pc.setColors(NSColor.systemMintColor(), NSColor.systemBrownColor())
         self.pc.immediateReticleUpdate(self.clock)
 
     def intervalProgress(self, percentComplete: float) -> None:
