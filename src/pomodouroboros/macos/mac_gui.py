@@ -99,20 +99,28 @@ class MacUserInterface:
         self.currentInterval = interval
         match interval:
             case StartPrompt():
+                debug("SHOWING upon StartPrompt")
+                self.pc.show()
                 self.pc.setColors(NSColor.redColor(), NSColor.darkGrayColor())
                 self.startPromptUpdate(interval)
                 self.intentionDataSource.startingUnblocked()
             case Pomodoro(intention=x):
+                debug("SHOWING upon Pomodoro")
+                self.pc.show()
                 self.pc.setColors(NSColor.greenColor(), NSColor.blueColor())
                 self.setExplanation(f"Work on Pomodoro: «{x.title}»")
                 self.intentionDataSource.startingBlocked()
             case Break():
+                debug("SHOWING upon break")
+                self.pc.show()
                 self.setExplanation("Take a break.")
                 self.pc.setColors(
                     NSColor.lightGrayColor(), NSColor.darkGrayColor()
                 )
                 self.intentionDataSource.startingBlocked()
             case GracePeriod():
+                debug("SHOWING upon GracePeriod")
+                self.pc.show()
                 self.intentionDataSource.startingUnblocked()
                 self.setExplanation("Keep your streak going!")
                 self.pc.setColors(
@@ -120,16 +128,25 @@ class MacUserInterface:
                     darkPurple,
                 )
             case Idle():
+                debug("HIDING upon idle")
+                self.pc.hide()
                 self.intentionDataSource.startingUnblocked()
                 self.setExplanation("Idle.")
                 self.pc.setColors(NSColor.systemMintColor(), NSColor.systemBrownColor())
         self.pc.immediateReticleUpdate(self.clock)
 
     def intervalProgress(self, percentComplete: float) -> None:
+        debug("updating percentage:", percentComplete, "for interval", self.currentInterval)
         match self.currentInterval:
             case StartPrompt():
+                debug("StartPrompt update")
                 self.startPromptUpdate(self.currentInterval)
-        self.pc.animatePercentage(self.clock, percentComplete)
+                self.pc.animatePercentage(self.clock, percentComplete)
+            case Pomodoro() | Break() | GracePeriod():
+                debug("Pom/Break/Grace update")
+                self.pc.animatePercentage(self.clock, percentComplete)
+            case _:
+                debug("no percentage animation")
 
     def intervalEnd(self) -> None:
         self.intentionDataSource.startingUnblocked()

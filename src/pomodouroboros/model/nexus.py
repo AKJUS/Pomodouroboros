@@ -386,11 +386,20 @@ class Nexus:
         Advance to the epoch time given.
         """
         # self._memDriver.step(until=newTime)
-        self._memDriver.advance(newTime - self._memDriver.now())
-        self.userInterface.intervalProgress(
-            (newTime - self.currentInterval.startTime)
-            / (self.currentInterval.endTime - self.currentInterval.startTime)
+        now = self._memDriver.now()
+        how = newTime - now
+        debug("advancing to", now, "by", how)
+        self._memDriver.advance(how)
+        debug("interval progress", self.currentInterval, newTime)
+        intervalLength = (
+            self.currentInterval.endTime - self.currentInterval.startTime
         )
+        totalProgress = (
+            ((newTime - self.currentInterval.startTime) / intervalLength)
+            if intervalLength > 0
+            else 1.0
+        )
+        self.userInterface.intervalProgress(totalProgress)
 
     def endStreak(self) -> None:
         """

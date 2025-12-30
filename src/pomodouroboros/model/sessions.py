@@ -44,6 +44,7 @@ from pomodouroboros.model.observables import (
 
 from .observables import addObserver
 from .rescheduling import Rescheduler
+from .debugger import debug
 
 if TYPE_CHECKING:
     from .ideal import IdealScoreInfo
@@ -154,10 +155,9 @@ class SessionManager:
 
     def upcomingSessionStartTime(self, fromTime: float) -> float:
         """
-        Return the time of the next upcoming session.
+        Return the time of the next upcoming session, after C{fromTime}.
         """
-        # FIXME: inspect upcoming rules as well!
-        return next(
+        upcoming = next(
             (
                 session.start
                 for session in self.upcomingSessions
@@ -165,6 +165,20 @@ class SessionManager:
             ),
             inf,
         )
+        # FIXME: tests for this part of the computation
+        dtRef = DateTime.fromtimestamp(fromTime + 0.001, self.zone)
+        debug("dtRef TIME", dtRef)
+        potentials = []
+        for rule in self.rules:
+            steps, nextRef = rule.startRule()(
+                dtRef, dtRef + MAX_SESSION_LENGTH
+            )
+            if steps:
+                debug("got steps", steps)
+                potential = steps[0].timestamp()
+                debug("idle potential length", potential - fromTime)
+                potentials.append(potential)
+        return min([upcoming, *potentials])
 
     def addManualSession(self, startTime: float, endTime: float) -> None:
         """
@@ -255,12 +269,14 @@ class SessionManager:
                         rule.startRule(),
                     )
                 yield sc
+
         rulesSchedule.observe(self.rules, "rules")
 
         @Rescheduler
         def upcomingSchedule() -> Iterable[Cancellable]:
             if not self.upcomingSessions:
                 return
+
             def startStaticSession() -> None:
                 # TODO: make sure it's … the same session? just generally clean up?
                 session = self.activeSession = self.upcomingSessions.pop(0)
@@ -281,9 +297,7 @@ class SessionManager:
                 def endSession() -> None:
                     self.activeSession = None
 
-                yield scheduler.callAt(
-                    self.activeSession.end, endSession
-                )
+                yield scheduler.callAt(self.activeSession.end, endSession)
 
         filter: Filter[str, object] = Filter("activeSession")
         addObserver(self, filter)

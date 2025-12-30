@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import inf
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -20,6 +19,7 @@ from .boundaries import (
 from .intention import Intention
 from .scoring import BreakCompleted, EvaluationScore, IntentionSet
 from .sessions import Session
+from .debugger import debug
 
 if TYPE_CHECKING:
     from .nexus import Nexus
@@ -290,7 +290,9 @@ class Idle:
         session: Session | None,
         durations: Iterator[Duration],
     ) -> AnyIntervalOrIdle:
-        assert 0, "implement Idle.buildNextInterval"
+        # FIXME: no tests!
+        debug("Idle idling out", self.startTime, self.endTime, session)
+        return idleOrPrompt(nexus, session, self.endTime)
 
     def scoreEvents(self) -> Iterable[ScoreEvent]:
         return ()
