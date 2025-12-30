@@ -25,12 +25,14 @@ from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
 from .intervals import (
     AnyStreakInterval,
+    AnyIntervalOrIdle,
     Break,
     Duration,
     Evaluation,
     GracePeriod,
     Pomodoro,
     StartPrompt,
+    idleOrPrompt,
 )
 from .nexus import Nexus
 from .observables import IgnoreChanges, ObservableList
@@ -47,7 +49,9 @@ from .sessions import Session, SessionManager
 
 
 def nexusFromJSON(
-    saved: SavedNexus, userInterfaceFactory: UserInterfaceFactory
+    saved: SavedNexus,
+    userInterfaceFactory: UserInterfaceFactory,
+    issueStartPrompts: bool = True,
 ) -> Nexus:
     """
     Load a Pomodouroboros Nexus from its saved serialized state.
@@ -157,7 +161,13 @@ def nexusFromJSON(
         _upcomingDurations=iter(
             [
                 Duration(
-                    IntervalType(each["intervalType"]), seconds=each["seconds"]
+                    # FIXME: make a function which restricts IntervalType, fix
+                    # up the serialized dict to reflect that durations can only
+                    # be breaks & pomodoros
+                    IntervalType(
+                        each["intervalType"]
+                    ),  # type:ignore[arg-type]
+                    seconds=each["seconds"],
                 )
                 for each in saved["upcomingDurations"]
             ]
@@ -165,8 +175,6 @@ def nexusFromJSON(
         _previousStreaks=previousStreaks,
         _currentStreak=currentStreak,
         _interfaceFactory=userInterfaceFactory,
-        _lastUpdateTime=lastUpdateTime,
-        _liveInterval=Idle(0, inf),
         _sessionManager=SessionManager.new(
             IgnoreChanges,
             scheduler,
@@ -174,6 +182,30 @@ def nexusFromJSON(
             sessions,
             sessionRules,
         ),
+        # need to deserialize current interval; none-interval means recompute
+        # an appropriate idle
+        _promptForStartWhenIdleInSession=issueStartPrompts,
+    )
+    # FIXME: it may be easier to understand to just persist the current
+    # interval explicitly and then load it blindly again rather than rederiving
+    # it.  Note however that this would mean maintaining a shared mutable
+    # reference because ._currentStreak and .currentInterval *must* share a
+    # common mutable interval object for (for example) early-evaluation of
+    # pomodoros, and any other edits
+    nexus.currentInterval = (
+        # if we're in a streak then it's the last thing in the streak
+        currentStreak[-1]
+        if currentStreak and lastUpdateTime < currentStreak[-1].endTime
+        else
+        # If we're in a session (but *not* a streak as that would be caught
+        # above), it's time to prompt
+        idleOrPrompt(
+            nexus,
+            it := nexus._sessionManager.activeSession,
+            # FIXME: this is definitely wrong, the correct reference time here
+            # would be the end of the streak time
+            it.start if it is not None else lastUpdateTime,
+        )
     )
     return nexus
 
@@ -202,7 +234,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
         """
         Save any interval to its paired JSON data structure.
         """
-        raise TypeError("unsupported type")
+        raise TypeError(f"unsupported type: {interval}")
 
     @saveInterval.register(Pomodoro)
     def savePomodoro(interval: Pomodoro) -> SavedPomodoro:
@@ -265,7 +297,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
             }
             for intention in nexus._intentions
         ],
-        "lastUpdateTime": nexus._lastUpdateTime,
+        "lastUpdateTime": nexus._scheduler.now(),
         "upcomingDurations": [
             {
                 "intervalType": duration.intervalType.value,
@@ -360,7 +392,6 @@ def loadDefaultNexus(
         return loaded
     # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
     # interval
-    currentInterval = Idle(startTime=0.0, endTime=inf)
     sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
         driver := MemoryDriver()
     )
@@ -369,8 +400,9 @@ def loadDefaultNexus(
         driver,
         userInterfaceFactory,
         0,
-        _liveInterval=currentInterval,
-        _sessionManager=SessionManager.new(IgnoreChanges, sched, guessLocalZone()),
+        _sessionManager=SessionManager.new(
+            IgnoreChanges, sched, guessLocalZone()
+        ),
     )
 
 

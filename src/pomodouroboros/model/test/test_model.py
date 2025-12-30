@@ -69,7 +69,7 @@ class TestUserInterface:
     Implementation of all UIEventListener protocols.
     """
 
-    theNexus: Nexus = field(init=False)
+    theNexus: Nexus = field(init=False, repr=False)
     clock: IReactorTime
     actions: list[TestInterval] = field(default_factory=list)
     actualInterval: TestInterval | None = None
@@ -198,7 +198,6 @@ class NexusTests(TestCase):
             driver,
             self.testUI.setIt,
             0,
-            Idle(0.0, inf),
             _sessionManager=SessionManager.new(IgnoreChanges, sched, TZ),
         )
 
@@ -212,7 +211,7 @@ class NexusTests(TestCase):
         now = self.clock.seconds()
         debug("test advancing model to", now)
         self.nexus.advanceToTime(now)
-        debug("model advanced", self.nexus._lastUpdateTime)
+        debug("model advanced", self.nexus._scheduler.now())
 
     def test_noPointsForNothing(self) -> None:
         """
@@ -251,25 +250,29 @@ class NexusTests(TestCase):
         When the user has a session started, they will receive notifications
         telling them about decreases to their potential maximum score.
         """
-        sessionStart = 1000
+        sessionStart = 1000.0
+        sessionEnd = 2000.0
+        startPromptEnd = 1400.0
         realTimeStartDelay = 100.0
-        self.nexus.addManualSession(sessionStart, 2000)
+        self.nexus.addManualSession(sessionStart, sessionEnd)
         self.advanceTime(sessionStart + realTimeStartDelay)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(1.0)
-        self.advanceTime(197.0)
-        self.advanceTime(100.0)
-        self.advanceTime(103.0)
+        self.advanceTime(1.0)  # 1
+        self.advanceTime(1.0)  # 2
+        self.advanceTime(1.0)  # 3
+        self.advanceTime(1.0)  # 4
+        self.advanceTime(1.0)  # 5
+        self.advanceTime(197.0)  # 197
+        self.advanceTime(100.0)  # 297
+        self.advanceTime(103.0)  # 300
+
+        secondPromptEnd = 1700.
 
         self.assertEqual(
             [
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1100.0,
-                        endTime=1400.0,
+                        startTime=sessionStart,
+                        endTime=startPromptEnd,
                         pointsBeforeLoss=21.25,
                         pointsAfterLoss=15.25,
                     ),
@@ -277,25 +280,38 @@ class NexusTests(TestCase):
                     actualEndTime=1402.0,
                     currentProgress=[
                         0.0,
-                        0.0033333333333333335,
-                        0.006666666666666667,
-                        0.01,
-                        0.013333333333333334,
-                        0.016666666666666666,
-                        0.6733333333333333,
+                        realTimeStartPct := (
+                            realTimeStartDelay
+                            / (startPromptEnd - sessionStart)
+                        ),
+                        realTimeStartPct
+                        + (
+                            increment := (
+                                1.0 / (startPromptEnd - sessionStart)
+                            )
+                        ),  # 1
+                        realTimeStartPct + (increment * 2),  # 2
+                        realTimeStartPct + (increment * 3),  # 3
+                        realTimeStartPct + (increment * 4),  # 4
+                        realTimeStartPct + (increment * 5),  # 5
+                        realTimeStartPct + (increment * (197.0 + 5)),  # 197
                         1.0,
                     ],
                 ),
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1402.0,
-                        endTime=1700.0,
+                        startTime=startPromptEnd,
+                        endTime=secondPromptEnd,
                         pointsBeforeLoss=15.25,
-                        pointsAfterLoss=4.0,
+                        pointsAfterLoss=4,
                     ),
                     actualStartTime=1402.0,
                     actualEndTime=None,
-                    currentProgress=[0.0, 0.34563758389261745],
+                    currentProgress=[
+                        0.0,
+                        (2.0 / (sessionEnd - secondPromptEnd)),  # 297
+                        (105.0 / (sessionEnd - secondPromptEnd)),  # 300
+                    ],
                 ),
             ],
             self.testUI.actions,
@@ -310,6 +326,7 @@ class NexusTests(TestCase):
         intention = self.nexus.addIntention("x")
         self.nexus.addManualSession(1000, 2000)
         self.advanceTime(100)  # no-op; time before session
+        self.assertEqual([], self.testUI.actions)
         self.advanceTime(1000)  # enter session
         self.advanceTime(50)  # time in session before pomodoro
         self.nexus.startPomodoro(intention)
@@ -318,7 +335,7 @@ class NexusTests(TestCase):
             [
                 TestInterval(
                     interval=StartPrompt(
-                        startTime=1100.0,
+                        startTime=1000.0,
                         endTime=1400.0,
                         pointsBeforeLoss=21.25,
                         pointsAfterLoss=15.25,
@@ -327,7 +344,8 @@ class NexusTests(TestCase):
                     actualEndTime=1150.0,
                     currentProgress=[
                         0.0,
-                        50.0 / 300.0,
+                        100 / 400.0,
+                        150 / 400.0,
                         1.0,
                     ],
                 ),
@@ -352,7 +370,7 @@ class NexusTests(TestCase):
     def test_idealScore(self) -> None:
         """
         The ideal score should be the best sequence of events that the user
-        could execute.
+        could execute over a given potential work session.
         """
         self.advanceTime(1000)
         ideal1 = idealScore(self.nexus, 1000.0, 2000.0)
@@ -368,8 +386,8 @@ class NexusTests(TestCase):
         )
         self.advanceTime(1600)
         ideal2 = idealScore(self.nexus, 1000.0, 2000.0)
-        self.assertEqual(ideal2.nextPointLoss, None)
         self.assertEqual(ideal2.pointsLost(), 0.0)
+        self.assertEqual(ideal2.nextPointLoss, 2600.0)
         # The perfect score is the same as the ideal score at the very
         # beginning of the session.
         self.assertEqual(
@@ -381,7 +399,6 @@ class NexusTests(TestCase):
         If you advance to exactly the boundary between pomodoro and break it
         should work ok.
         """
-
         self.advanceTime(5.0)
         i = self.nexus.addIntention("i")
         self.nexus.startPomodoro(i)
@@ -398,7 +415,8 @@ class NexusTests(TestCase):
                     Break(5 + 5.0 * 60, 5 + (5 * 60.0 * 2)),
                     actualStartTime=5 + 5.0 * 60,
                     actualEndTime=None,
-                    currentProgress=[0.0],
+                    # once reported by startNewInterval, once by advanceToTime
+                    currentProgress=[0.0, 0.0],
                 ),
             ],
             self.testUI.actions,
@@ -431,20 +449,28 @@ class NexusTests(TestCase):
         # note that I definitely cheated a little bit with these data
         # structures and copied them out of the observed output of the code, I
         # didn't hand-calculate that it's 1500 seconds to the next score drop
-        promptStart = 1715191200.0
+        promptStart = 1715185800.0
+        assert (
+            promptStart == self.nexus._sessionManager.previousSessions[0].start
+        )
         promptStop = 1715192700.0
+        assert promptStop == now.timestamp() + 1500.0
+        expectedPrompt = StartPrompt(
+            startTime=promptStart,
+            endTime=promptStop,
+            pointsBeforeLoss=ANY,
+            pointsAfterLoss=ANY,
+        )
         self.assertEqual(
             [
                 TestInterval(
-                    interval=StartPrompt(
-                        startTime=promptStart,
-                        endTime=promptStop,
-                        pointsBeforeLoss=ANY,
-                        pointsAfterLoss=ANY,
-                    ),
+                    interval=expectedPrompt,
                     actualStartTime=0.0,
                     actualEndTime=None,
-                    currentProgress=[0.0],
+                    currentProgress=[
+                        0.0,
+                        ((90 * 60) / (promptStop - promptStart)),
+                    ],
                 )
             ],
             self.testUI.actions,
@@ -453,15 +479,14 @@ class NexusTests(TestCase):
         self.assertEqual(
             [
                 TestInterval(
-                    interval=StartPrompt(
-                        startTime=1715191200.0,
-                        endTime=1715192700.0,
-                        pointsBeforeLoss=ANY,
-                        pointsAfterLoss=ANY,
-                    ),
+                    interval=expectedPrompt,
                     actualStartTime=0.0,
                     actualEndTime=None,
-                    currentProgress=[0.0, (20 / (promptStop - promptStart))],
+                    currentProgress=[
+                        0.0,
+                        ((90 * 60) / (promptStop - promptStart)),
+                        ((20 + (90 * 60)) / (promptStop - promptStart)),
+                    ],
                 )
             ],
             self.testUI.actions,
@@ -774,8 +799,11 @@ class NexusTests(TestCase):
         )
         self.maxDiff = 99999
         self.assertEqual(self.nexus._intentions, roundTrip._intentions)
-        self.assertEqual(self.nexus._activeInterval, roundTrip._activeInterval)
-        self.assertEqual(self.nexus._lastUpdateTime, roundTrip._lastUpdateTime)
+
+        self.assertEqual(self.nexus.currentInterval, roundTrip.currentInterval)
+        self.assertEqual(
+            self.nexus._scheduler.now(), roundTrip._scheduler.now()
+        )
         self.assertEqual(
             list(self.nexus.cloneWithoutUI()._upcomingDurations),
             list(roundTrip.cloneWithoutUI()._upcomingDurations),

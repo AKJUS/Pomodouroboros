@@ -360,6 +360,14 @@ def addObserver(observable: object, observer: Changes[Any, Any]) -> None:
     )
     # okay now we need to descend down the observables hierarchy
     for k, v in observable.__class__.__dict__.items():
+        # FIXME: addObserver can be called in a property which means that you
+        # can be in the middle of initializing it and then hit another cached
+        # property which will then go back around to the first cached property
+        # and add another observer. basically: not safe to call addObserver
+        # anywhere under getattr() as you may well end up in an infinite loop
+        # because this will call through to EVERY other attribute.  we should
+        # have guard rails in here to avoid annoying infinite recursion
+        # debugging
         subservable = getattr(observable, k, None)
         subprop = _ObserverProperty.of(subservable)
         if subprop is not None:
@@ -847,6 +855,51 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
         return cls
 
     return make_observable
+
+
+@dataclass
+class Filter(Generic[Kcon, Vcon]):
+    """
+    Observe only a single key on an observable object.
+
+    Use like so::
+
+        observable = Something(someAttribute=...)
+        observer = SomeObserver()
+        observable.observer = Filter("someAttribute", observer)
+    """
+    key: Kcon
+    filtered: Changes[Kcon, Vcon] = IgnoreChanges
+    __observable_observer__: ClassVar[str] = "filtered"
+
+    @contextmanager
+    def added(self, key: Kcon, new: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.added(key, new):
+            yield
+
+    @contextmanager
+    def removed(self, key: Kcon, old: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.removed(key, old):
+            yield
+
+    @contextmanager
+    def changed(self, key: Kcon, old: Vcon, new: Vcon) -> Iterator[None]:
+        if key != self.key:
+            yield
+            return
+        with self.filtered.changed(key, old, new):
+            yield
+
+    def child(self, key: Kcon) -> Changes[Any, Any]:
+        if key != self.key:
+            return IgnoreChanges
+        return self.filtered.child(key)
 
 
 @dataclass(repr=False)

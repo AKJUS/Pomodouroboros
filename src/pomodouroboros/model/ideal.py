@@ -41,7 +41,7 @@ class IdealScoreInfo:
     sessionStart: float
     sessionEnd: float
     idealScoreNow: ScoreSummary
-    nextPointLoss: float | None
+    nextPointLoss: float
     idealScoreNext: ScoreSummary
     perfectScore: ScoreSummary
 
@@ -81,28 +81,38 @@ def idealFuture(
     @param sessionEnd: The point beyond which we will not count points
         any more; i.e. the end of the work day.
     """
+    debug("generating hypothetical", nexus.currentInterval)
     hypothetical = nexus.cloneWithoutUI()
-    debug("advancing to activity start", nexus._lastUpdateTime, activityStart)
+    debug("advancing to activity start", nexus._scheduler.now(), activityStart)
+    debug("interval before activity start", hypothetical.currentInterval)
     hypothetical.advanceToTime(activityStart)
+    debug("interval after activity start", hypothetical.currentInterval)
 
     c = count()
 
     def newPlaceholder() -> Intention:
-        return hypothetical.addIntention(f"placeholder {next(c)}")
+        intentionCount = next(c)
+        debug("adding a new intention", intentionCount)
+        return hypothetical.addIntention(f"placeholder {intentionCount}")
 
-    while hypothetical._lastUpdateTime <= sessionEnd:
-        workingInterval: AnyIntervalOrIdle = hypothetical._activeInterval
+    while hypothetical._scheduler.now() <= sessionEnd:
+        workingInterval: AnyIntervalOrIdle = hypothetical.currentInterval
         debug("ideal working interval:", workingInterval)
         if isinstance(workingInterval, (Idle, GracePeriod)):
             # We are either idle or in a grace period, so we should
             # immediately start a pomodoro.
 
             intention = newPlaceholder()
+            # TODO: we need to be exactly estimating every intention to get
+            # maximum points.
             startResult = hypothetical.startPomodoro(intention)
             assert startResult in {
                 PomStartResult.Started,
                 PomStartResult.Continued,
             }, "invariant failed: could not actually start pomodoro"
+            assert isinstance(
+                hypothetical.currentInterval, Pomodoro
+            ), f"we should be in a pomodoro now {hypothetical.currentInterval}"
         elif isinstance(workingInterval, (Break, Pomodoro)):
             debug("advancing to interval end", workingInterval)
             hypothetical.advanceToTime(workingInterval.endTime)
@@ -111,8 +121,17 @@ def idealFuture(
                 hypothetical.evaluatePomodoro(
                     workingInterval, EvaluationResult.achieved
                 )
-            # TODO: we need to be exactly estimating every intention to get
-            # maximum points.
+        else:
+
+            # this should not advance past the end of a session, because
+            # there's the big inequality up at the top there about the end of
+            # the session.  thus each iteration through here we should be
+            # getting a GracePeriod or an Idle if we're just getting started,
+            # in which case will always unconditionally immediately start a
+            # pomodoro; otherwise, we get a Break or a Pomodoro.  under no
+            # circumstances should we be able to see a StartPrompt here.
+
+            assert False, f"bad interval type: {workingInterval}"
     return hypothetical
 
 
@@ -120,14 +139,15 @@ def idealScore(
     nexus: Nexus, sessionStart: float, sessionEnd: float
 ) -> IdealScoreInfo:
     """
-    Compute the inflection point for the ideal score the user might achieve.
-    We present two hypothetical futures: one where the user executes perfectly
-    from the current update time of the given C{Nexus} to C{sessionEnd}, and
-    the other where they wait exactly long enough to lose I{one} element of
-    that perfect score, and then begin executing perfectly.
+    Compute the inflection point for the ideal score the user might achieve in
+    a session with the given start and end times.  We present two hypothetical
+    futures: one where the user executes perfectly from the current update time
+    of the given C{Nexus} to C{sessionEnd}, and the other where they wait
+    exactly long enough to lose I{one} element of that perfect score, and then
+    begin executing perfectly.
     """
     debug("ideal future 1")
-    workPeriodBegin = nexus._lastUpdateTime
+    workPeriodBegin = nexus._scheduler.now()
     currentIdeal = idealFuture(nexus, workPeriodBegin, sessionEnd)
     idealScoreNow = sorted(
         # TODO: we're scoring all events from all time here
@@ -143,20 +163,11 @@ def idealScore(
             )
         )
     )
-    if not idealScoreNow:
-        return IdealScoreInfo(
-            now=workPeriodBegin,
-            idealScoreNow=ScoreSummary(idealScoreNow),
-            sessionStart=sessionStart,
-            sessionEnd=sessionEnd,
-            nextPointLoss=None,
-            idealScoreNext=ScoreSummary(idealScoreNow),
-            perfectScore=perfectSummary,
-        )
-    latestScoreTime = idealScoreNow[-1].time
+    latestScoreTime = idealScoreNow[-1].time if idealScoreNow else sessionEnd
     pointLossTime = workPeriodBegin + (sessionEnd - latestScoreTime)
+    debug("pointLossTime", pointLossTime, workPeriodBegin)
     return IdealScoreInfo(
-        now=nexus._lastUpdateTime,
+        now=nexus._scheduler.now(),
         idealScoreNow=ScoreSummary(idealScoreNow),
         sessionStart=sessionStart,
         sessionEnd=sessionEnd,

@@ -284,6 +284,9 @@ class MacPomObserver(object):
             NSLog("refreshing after intention status change")
             self.refreshList()
         self.active = True
+        # FIXME: horrible bug in boundary condition at start of day, but, maybe
+        # just fix the new version
+        self.progressController.show()
         self.progressController.animatePercentage(
             self.clock,
             percentageElapsed,

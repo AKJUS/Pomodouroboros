@@ -39,7 +39,7 @@ from AppKit import (
 )
 from Foundation import NSPoint, NSRect
 from objc import super
-from twisted.internet.defer import CancelledError, Deferred
+from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
@@ -367,6 +367,9 @@ class ProgressController(object):
                     alphaVariance,
                 )
             )
+        if not self.shouldBeVisible:
+            debug("should not be visible, ignoring animation request")
+            return succeed(None)
         self.pulseCounter += 1
         if self.pulseCounter % 3 == 0:
             self._textReminder(clock)
@@ -431,6 +434,7 @@ class ProgressController(object):
         """
         Display this progress controller on all displays
         """
+        debug("***************\n\nSHOWING\n\n***************")
         self.shouldBeVisible = True
         if not self.progressViews:
             self.redisplay()

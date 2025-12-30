@@ -1,6 +1,7 @@
-# -*- test-case-name: pomodouroboros.model.test.test_sessions -*-
+# -*- test-case-name: pomodouroboros.model.test.test_sessions,pomodouroboros.model.test.test_model -*-
 from __future__ import annotations
 
+from bisect import bisect
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -10,8 +11,8 @@ from typing import (
     TYPE_CHECKING,
     Callable,
     ContextManager,
-    Iterator,
     Iterable,
+    Iterator,
     Protocol,
     Sequence,
 )
@@ -34,12 +35,16 @@ from twisted.internet.defer import Deferred
 
 from pomodouroboros.model.observables import (
     Changes,
+    Filter,
     IgnoreChanges,
     ObservableList,
     Observer,
     observable,
-    addObserver,
 )
+
+from .observables import addObserver
+from .rescheduling import Rescheduler
+from .debugger import debug
 
 if TYPE_CHECKING:
     from .ideal import IdealScoreInfo
@@ -126,33 +131,17 @@ class StatefulCancel:
     def update(self, state: Cancellable | None) -> None:
         self._state = state
 
-
-@dataclass
-class _SessionDependencyObserver:
-    name: str
-    manager: SessionManager
-    # Implementation of observer protocol, for watching changes to the list of
-    # L{SessionRule} objects in C{self.rules}
-
+    @classmethod
     @contextmanager
-    def added(self, key: object, new: object) -> Iterator[None]:
-        yield
-        self.manager._reschedule((self.name, "added", key,new))
+    def create(cls) -> Iterator[StatefulCancel]:
+        self = cls()
+        yield self
+        assert (
+            self._state is not None
+        ), "should be populated by the time the context is done"
 
-    @contextmanager
-    def removed(self, key: object, old: object) -> Iterator[None]:
-        yield
-        self.manager._reschedule((self.name, "removed", key,old))
 
-    @contextmanager
-    def changed(self, key: object, old: object, new: object) -> Iterator[None]:
-        yield
-        self.manager._reschedule((self.name, "changed", key, old, new))
-
-    def child(self, key: object) -> Changes[object, object]:
-        return _SessionDependencyObserver(f"{self.name}.{key}", self.manager)
-
-    # End observer protocol
+MAX_SESSION_LENGTH = timedelta(days=7)
 
 
 @observable()
@@ -161,15 +150,62 @@ class SessionManager:
     upcomingSessions: ObservableList[Session]
     previousSessions: ObservableList[Session]
     rules: ObservableList[DailySessionRule]
-    _physicalScheduler: Scheduler[float, Callable[[], None], int]
-    _civilScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
-    _everythingScheduled: list[Cancellable] = field(default_factory=list)
+    zone: ZoneInfo
     activeSession: Session | None = None
+
+    def upcomingSessionStartTime(self, fromTime: float) -> float:
+        """
+        Return the time of the next upcoming session, after C{fromTime}.
+        """
+        upcoming = next(
+            (
+                session.start
+                for session in self.upcomingSessions
+                if session.end > fromTime and session.start > fromTime
+            ),
+            inf,
+        )
+        # FIXME: tests for this part of the computation
+        dtRef = DateTime.fromtimestamp(fromTime + 0.001, self.zone)
+        debug("dtRef TIME", dtRef)
+        potentials = []
+        for rule in self.rules:
+            steps, nextRef = rule.startRule()(
+                dtRef, dtRef + MAX_SESSION_LENGTH
+            )
+            if steps:
+                debug("got steps", steps)
+                potential = steps[0].timestamp()
+                debug("idle potential length", potential - fromTime)
+                potentials.append(potential)
+        return min([upcoming, *potentials])
+
+    def addManualSession(self, startTime: float, endTime: float) -> None:
+        """
+        Create a new manual upcoming session with the given start and end time.
+        """
+        newSession = Session(startTime, endTime, False)
+        self._insort(newSession)
+
+    def _insort(self, session: Session) -> None:
+        """
+        Insert the given session into the upcoming sessions list (potentially
+        implicitly rescheduling and starting it in the process, if the time is
+        right for that).
+        """
+        location = bisect(
+            self.upcomingSessions,
+            session.start,
+            0,
+            None,
+            key=lambda session: session.start,
+        )
+        self.upcomingSessions.insert(location, session)
 
     def _beginSessionWithRule(
         self, state: StatefulCancel, rule: SessionRule
     ) -> RepeatingWork[list[DateTime[ZoneInfo]]]:
-        def work(
+        def createAndBeginRuleSession(
             steps: list[DateTime[ZoneInfo]], scheduled: Cancellable
         ) -> None:
             state.update(scheduled)
@@ -178,94 +214,23 @@ class SessionManager:
                 # is set up.  Once an actual instance of the rule has passed,
                 # C{steps} will have that value in it.
                 return
-            endSteps, endNextRefs = rule.endRule()(
-                steps[-1], steps[-1] + timedelta(days=7)
+            # Get the matched recurrence of the ending rule, for the starting
+            # rule that we created.
+            endRule = rule.endRule()
+            endSteps, endNextRefs = endRule(
+                steps[-1], steps[-1] + MAX_SESSION_LENGTH
             )
             if not endSteps:
+                # the session end wasn't found within the maximum session
+                # begin/end interval delta, so it's invalid; do nothing.
+                # FIXME: test
+                # maybe: state.cancel()
                 return None
-            session = Session(
-                steps[-1].timestamp(), endSteps[0].timestamp(), True
-            )
-            self.activeSession = session
-            self.previousSessions.append(session)
-            self._reschedule("rules-start")
-
-        return work
-
-    def upcomingSessionStartTime(self, fromTime: float) -> float:
-        """
-        Return the time of the next upcoming session.
-        """
-        return next(
-            (
-                session.start
-                for session in self.upcomingSessions
-                if session.end > fromTime and session.start > fromTime
-            ),
-            inf,
-        )
-
-    def addManualSession(self, startTime: float, endTime: float) -> None:
-        newSession = Session(startTime, endTime, False)
-        from bisect import bisect
-
-        location = bisect(
-            self.upcomingSessions,
-            newSession.start,
-            0,
-            None,
-            key=lambda session: session.start,
-        )
-        self.upcomingSessions.insert(location, newSession)
-
-
-    def _reschedule(self, why: object) -> None:
-        """
-        Something has changed; reschedule all the scheduled stuff.
-
-        @param why: just for debugging, to see why ._reschedule() got called,
-            since there are many different places.
-        """
-        # TODO: reentrancy guard; if _reschedule() changes .rules somehow, this
-        # state will be corrupted
-        self._everythingScheduled, toCancel = [], self._everythingScheduled[:]
-        for sched in toCancel:
-            sched.cancel()
-        for rule in self.rules:
-            self._everythingScheduled.append(sc := StatefulCancel())
-            repeatedly(
-                self._civilScheduler,
-                self._beginSessionWithRule(sc, rule),
-                rule.startRule(),
+            self._insort(
+                Session(steps[-1].timestamp(), endSteps[0].timestamp(), True)
             )
 
-        if self.upcomingSessions:
-
-            def startStaticSession() -> None:
-                # TODO: make sure it's … the same session? just generally clean up?
-                session = self.activeSession = self.upcomingSessions.pop(0)
-                self._reschedule("just-set-active")
-                self.previousSessions.append(session)
-
-            earliestSession = self.upcomingSessions[0]
-            self._everythingScheduled.append(
-                self._physicalScheduler.callAt(
-                    earliestSession.start,
-                    startStaticSession,
-                )
-            )
-
-        if self.activeSession is not None:
-            def endSession() -> None:
-                # end statically-scheduled session
-                self.activeSession = None
-
-            self._everythingScheduled.append(
-                ender := self._physicalScheduler.callAt(
-                    self.activeSession.end, endSession
-                ),
-            )
-
+        return createAndBeginRuleSession
 
     @classmethod
     def new(
@@ -276,9 +241,6 @@ class SessionManager:
         sessions: Iterable[Session] = (),
         rules: Iterable[DailySessionRule] = (),
     ) -> SessionManager:
-        if zone is None:
-            # zone = guessLocalZone()
-            zone = ZoneInfo("Etc/UTC")
         dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
         now = scheduler.now()
         branchManager, dateScheduler = branch(scheduler, dateScale)
@@ -293,12 +255,52 @@ class SessionManager:
             upcomingSessions=upcoming,
             previousSessions=previous,
             rules=ObservableList(IgnoreChanges, list(rules)),
+            zone=zone,
             activeSession=active,
-            _physicalScheduler=scheduler,
-            _civilScheduler=dateScheduler,
         )
-        root = _SessionDependencyObserver("manager", self)
-        addObserver(self.rules, root.child("rules"))
-        addObserver(self.upcomingSessions, root.child("upcomingSessions"))
-        self._reschedule("new")
+
+        @Rescheduler
+        def rulesSchedule() -> Iterable[Cancellable]:
+            for rule in self.rules:
+                with StatefulCancel.create() as sc:
+                    repeatedly(
+                        dateScheduler,
+                        self._beginSessionWithRule(sc, rule),
+                        rule.startRule(),
+                    )
+                yield sc
+
+        rulesSchedule.observe(self.rules, "rules")
+
+        @Rescheduler
+        def upcomingSchedule() -> Iterable[Cancellable]:
+            if not self.upcomingSessions:
+                return
+
+            def startStaticSession() -> None:
+                # TODO: make sure it's … the same session? just generally clean up?
+                session = self.activeSession = self.upcomingSessions.pop(0)
+                self.previousSessions.append(session)
+
+            earliestSession = self.upcomingSessions[0]
+            yield scheduler.callAt(
+                earliestSession.start,
+                startStaticSession,
+            )
+
+        upcomingSchedule.observe(self.upcomingSessions, "upcomingSessions")
+
+        @Rescheduler
+        def endSchedule() -> Iterable[Cancellable]:
+            if self.activeSession is not None:
+
+                def endSession() -> None:
+                    self.activeSession = None
+
+                yield scheduler.callAt(self.activeSession.end, endSession)
+
+        filter: Filter[str, object] = Filter("activeSession")
+        addObserver(self, filter)
+        endSchedule.observe(filter, "self")
+
         return self
