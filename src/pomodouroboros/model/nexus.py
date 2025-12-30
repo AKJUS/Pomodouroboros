@@ -246,14 +246,25 @@ class Nexus:
                 return IgnoreChanges
 
         def startNewSession(
-            oldSession: Session | None, newSession: Session
+            oldSession: Session | None, newSession: Session | None
         ) -> None:
-            if not isinstance(self.currentInterval, Idle):
-                debug("SESSION STARTING WHILE NOT IDLE", self.currentInterval)
+            debug("session changed from", oldSession, "to", newSession)
+            if newSession is not None and not isinstance(
+                self.currentInterval, Idle
+            ):
+                debug(
+                    "Session starting while existing interval running",
+                    self.currentInterval,
+                )
                 return
-            self.currentInterval = idleOrPrompt(
-                self, newSession, newSession.start
-            )
+            if newSession is None:
+                if oldSession is None:
+                    # set from none to none; silly, but no-op
+                    return
+                refTime = oldSession.end
+            else:
+                refTime = newSession.start
+            self.currentInterval = idleOrPrompt(self, newSession, refTime)
 
         addObserver(justCurrentInterval, AfterChanger(startNewInterval))
         addObserver(
