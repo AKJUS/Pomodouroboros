@@ -116,6 +116,11 @@ async def multipleChoiceButtons(
             color,
             str(key),
         )
+        # if you want some pizzaz
+        # from random import random
+        # b.rotateByAngle_((random() - 0.5) * 20)
+
+        # not sure what this is for
         # b.setTranslatesAutoresizingMaskIntoConstraints_(False)
         viewsToStack.append(b)
 
