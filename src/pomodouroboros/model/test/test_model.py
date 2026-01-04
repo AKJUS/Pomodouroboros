@@ -241,7 +241,9 @@ class NexusTests(TestCase):
         self.nexus.startPomodoro(a)
         pom = a.pomodoros[0]
         self.advanceTime(pom.endTime - self.clock.seconds())
-        self.nexus.evaluatePomodoro(pom, EvaluationResult.achieved)
+        self.nexus.evaluatePomodoro(
+            pom, EvaluationResult.achieved, pom.endTime
+        )
         self.advanceTime(10)
         self.assertEqual(checkScore(), 0)
 
@@ -265,7 +267,7 @@ class NexusTests(TestCase):
         self.advanceTime(100.0)  # 297
         self.advanceTime(103.0)  # 300
 
-        secondPromptEnd = 1700.
+        secondPromptEnd = 1700.0
 
         self.assertEqual(
             [
@@ -861,17 +863,23 @@ class NexusTests(TestCase):
         DEFAULT_DURATION = 5.0 * 60.0
         EARLY_COMPLETION = DEFAULT_DURATION / 3
 
-        self.advanceTime(EARLY_COMPLETION)
+        # self.advanceTime(EARLY_COMPLETION)
         action = self.testUI.actions[0].interval
         assert isinstance(action, Pomodoro), f"{action}"
         self.assertEqual(self.nexus.availableIntentions, [intent])
         # TODO:
         # self.assertEqual(self.testUI.completedIntentions, [])
-        self.nexus.evaluatePomodoro(action, EvaluationResult.achieved)
+        self.clock.advance(EARLY_COMPLETION)
+        self.nexus.evaluatePomodoro(
+            action,
+            EvaluationResult.achieved,
+            START_TIME + EARLY_COMPLETION,
+        )
         self.assertEqual(self.nexus.availableIntentions, [])
+        self.advanceTime(1.0)
         # TODO:
         # self.assertEqual(self.testUI.completedIntentions, [intent])
-        self.advanceTime(1)
+        self.maxDiff = 9999999999
         self.assertEqual(
             [
                 TestInterval(
@@ -889,7 +897,7 @@ class NexusTests(TestCase):
                     ),
                     actualStartTime=START_TIME,
                     actualEndTime=START_TIME + EARLY_COMPLETION,
-                    currentProgress=[0.0, 1 / 3, 1.0],
+                    currentProgress=[0.0, 1.0],
                 ),
                 TestInterval(
                     interval=Break(
@@ -903,8 +911,10 @@ class NexusTests(TestCase):
                     # Jumped in right at the beginning, went way out past the
                     # end
                     currentProgress=[
-                        0.0,  # is this desirable?
-                        0.0033333333333333335,
+                        0.0,  # 0.0 from starting the break; is this desirable?
+                        0.0,  # 0.0 from advanceToTime being called immediately
+                              # after early-advance
+                        1.0 / 300.0,  # 1 extra second / default break duration
                     ],
                 ),
             ],
@@ -931,7 +941,9 @@ class NexusTests(TestCase):
         self.advanceTime(EARLY_COMPLETION)
         action = self.testUI.actions[0].interval
         assert isinstance(action, Pomodoro)
-        self.nexus.evaluatePomodoro(action, EvaluationResult.distracted)
+        self.nexus.evaluatePomodoro(
+            action, EvaluationResult.distracted, START_TIME + EARLY_COMPLETION
+        )
         self.advanceTime(1)
         self.assertEqual(
             [
@@ -971,6 +983,8 @@ class NexusTests(TestCase):
             return sum(each.points for each in events)
 
         before = currentPoints()
-        self.nexus.evaluatePomodoro(pom, EvaluationResult.focused)
+        self.nexus.evaluatePomodoro(
+            pom, EvaluationResult.focused, self.nexus._scheduler.now()
+        )
         after = currentPoints()
         self.assertEqual(after - before, 1.0)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -16,10 +16,11 @@ from .boundaries import (
     PomStartResult,
     ScoreEvent,
 )
+from .debugger import debug
 from .intention import Intention
+from .observables import IgnoreChanges, Observer, observable
 from .scoring import BreakCompleted, EvaluationScore, IntentionSet
 from .sessions import Session
-from .debugger import debug
 
 if TYPE_CHECKING:
     from .nexus import Nexus
@@ -97,7 +98,9 @@ class Break:
         return buildNextInStreak(self, nexus, session, durations)
 
 
-def idleOrPrompt(nexus: Nexus, session: Session | None, referenceTime: float) -> Idle | StartPrompt:
+def idleOrPrompt(
+    nexus: Nexus, session: Session | None, referenceTime: float
+) -> Idle | StartPrompt:
     """
     We have rolled off the end of a streak or a grace period, and it's time to
     start prompting the user to start a new streak with a StartPrompt, or to go
@@ -135,7 +138,7 @@ def buildNextInStreak(
         )
 
 
-@dataclass
+@observable()
 class Pomodoro:
     """
     Interval where the user has set an intention and is attempting to do
@@ -149,6 +152,7 @@ class Pomodoro:
 
     evaluation: Evaluation | None = None
     intervalType: ClassVar[IntervalType] = IntervalType.Pomodoro
+    observer: Observer = field(default_factory=IgnoreChanges, compare=False, repr=False)
 
     def buildNextInterval(
         self,

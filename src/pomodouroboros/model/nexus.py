@@ -118,13 +118,9 @@ def _observationSetup(nexus: Nexus) -> None:
         )
         debug("end rescheduling end")
 
-
     def startNewInterval(
         oldInterval: AnyIntervalOrIdle | None, newInterval: AnyIntervalOrIdle
     ) -> None:
-        if oldInterval is newInterval:
-            debug("early-exit restarting interval")
-            return
         debug("***START NEW INTERVAL", newInterval, "from", oldInterval)
         if (not isinstance(newInterval, Idle)) and (
             # a bit of a hack here to avoid the case where, when
@@ -233,6 +229,10 @@ class Nexus:
     observer: Observer = IgnoreChanges
 
     def endInterval(self) -> None:
+        # FIXME: this should not be a stand-alone method exposed for other
+        # objects to call, it's an internal state thing that is only called
+        # because the state-change observation isn't catching changes to
+        # Pomodoro objects when their interval end is set.
         debug("ending interval", self.currentInterval)
         self.userInterface.intervalProgress(1.0)
         self.userInterface.intervalEnd()
@@ -437,12 +437,11 @@ class Nexus:
         return self.currentInterval.handleStartPom(self, startPom)
 
     def evaluatePomodoro(
-        self, pomodoro: Pomodoro, result: EvaluationResult
+        self, pomodoro: Pomodoro, result: EvaluationResult, timestamp: float
     ) -> None:
         """
-        The user has determined the success criteria.
+        The user has determined the success criteria, at the given timestamp.
         """
-        timestamp = self._scheduler.now()
         pomodoro.evaluation = Evaluation(result, timestamp)
         if result == EvaluationResult.achieved:
             if timestamp < pomodoro.endTime:
@@ -457,4 +456,4 @@ class Nexus:
                 debug("done setting end time")
                 # nb: endInterval assigns the new interval which cancels the
                 # interval-end timer so we won't double-end
-                self.endInterval()
+                self.advanceToTime(timestamp)

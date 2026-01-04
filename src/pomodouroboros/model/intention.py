@@ -47,16 +47,27 @@ class Intention:
     # id: ULID = field(default_factory=new_ulid, compare=False)
 
     def _compref(self) -> dict[str, object]:
+        """
+        Get a reference copy of data, in the format of a dict of goop, for
+        comparison.
+        """
         return asdict(
             replace(
                 self,
                 pomodoros=[
-                    # we're just going to dump it into a dict here anyway, so
-                    # the type ignore isn't a big deal
-                    replace(each, intention=None)  # type:ignore[arg-type]
+                    replace(
+                        each,
+                        # we're just going to dump it into a dict here anyway,
+                        # so the type ignore isn't a big deal
+                        intention=None,  # type:ignore[arg-type]
+
+                        # existing observer points at both the whole nexus and
+                        # the UI and will this not be deep-copyable
+                        observer=IgnoreChanges,
+                    )
                     for each in self.pomodoros
                 ],
-                id=None,        # type:ignore[arg-type]
+                id=None,  # type:ignore[arg-type]
             )
         )
 

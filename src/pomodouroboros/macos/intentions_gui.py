@@ -366,8 +366,10 @@ class IntentionPomodorosDataSource(NSObject):
         assert (
             self.selectedPomodoro is not None
         ), "must have a pomodorodo selected and the UI should be enforcing that"
+        # FIXME: pass reactor or fritter real-time float-scheduler in here somewhere
+        from time import time
         with refreshedData(self.intentionsTable, self.intentionPomsTable):
-            self.nexus.evaluatePomodoro(self.selectedPomodoro, er)
+            self.nexus.evaluatePomodoro(self.selectedPomodoro, er, time())
             self.allIntentionsSource.recalculate()
 
     @IBAction

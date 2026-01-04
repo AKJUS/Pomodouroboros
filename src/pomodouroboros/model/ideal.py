@@ -119,7 +119,9 @@ def idealFuture(
             if isinstance(workingInterval, Pomodoro):
                 debug("achieving")
                 hypothetical.evaluatePomodoro(
-                    workingInterval, EvaluationResult.achieved
+                    workingInterval,
+                    EvaluationResult.achieved,
+                    hypothetical._scheduler.now(),
                 )
         else:
 
