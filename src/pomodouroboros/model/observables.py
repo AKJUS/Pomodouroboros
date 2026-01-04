@@ -138,6 +138,8 @@ from typing import (
 )
 from weakref import proxy
 
+from .debugger import debug
+
 
 __all__ = [
     "observable",
@@ -155,6 +157,8 @@ __all__ = [
     "PathObserver",
     "AfterInitObserver",
     "build",
+    "Filter",
+    "filtered",
 ]
 
 K = TypeVar("K")
@@ -868,6 +872,7 @@ class Filter(Generic[Kcon, Vcon]):
         observer = SomeObserver()
         observable.observer = Filter("someAttribute", observer)
     """
+
     key: Kcon
     filtered: Changes[Kcon, Vcon] = IgnoreChanges
     __observable_observer__: ClassVar[str] = "filtered"
@@ -900,6 +905,58 @@ class Filter(Generic[Kcon, Vcon]):
         if key != self.key:
             return IgnoreChanges
         return self.filtered.child(key)
+
+
+def filtered(observee: object, name: str) -> Changes[str, object]:
+    """
+    Add a L{Filter} for the given attribute C{name} on C{observee}, and return
+    it so that it may be observed in turn.
+    """
+    # TODO: this needs some way to remove the L{Filter} from C{observee} later
+    # if it's no longer used, so this return type is not the best.
+    filter: Filter[str, object] = Filter(name)
+    addObserver(observee, filter)
+    return filter
+
+
+@dataclass
+class AfterChanger:
+    """
+    A simplifying L{Changes} that can call the given 2-argument C{change}
+    callable with old/new values after the change has occurred.
+    """
+
+    change: Callable[[Any, Any], None]
+
+    @contextmanager
+    def added(self, key: str, new: Any) -> Iterator[None]:
+        debug("added!")
+        yield
+        self.change(None, new)
+
+    @contextmanager
+    def changed(self, key: str, old: object, new: Any) -> Iterator[None]:
+        debug("changed!")
+        yield
+        self.change(old, new)
+
+    @contextmanager
+    def removed(self, key: str, old: Any) -> Iterator[None]:
+        assert 0, "this should not be removed"
+        yield
+
+    def child(self, key: str) -> Changes[Any, Any]:
+        # TODO: should not actually ignore changes on sub-objects
+        return IgnoreChanges
+
+        # okay so when you're requesting a child observer you need to know what
+        # the original object is. here, in particular, when a sub-attribute
+        # changes we want to call change(subobject, subobject). i.e. if an
+        # attribute changes on the relevant subobject, we want to be calling
+        # the method that will update whatever is derived from that sub-object.
+        # we weren't relaying the key because the only use-case for this right
+        # now also uses a Filter
+        # return ParentChanger(self.change, key, )
 
 
 @dataclass(repr=False)

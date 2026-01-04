@@ -20,8 +20,6 @@ from fritter.drivers.twisted import TwistedTimeDriver
 from fritter.scheduler import schedulerFromDriver
 from fritter.tree import BranchManager, Scale, branch
 
-from pomodouroboros.model.observables import Filter
-
 from .boundaries import (
     EvaluationResult,
     IntervalType,
@@ -52,6 +50,8 @@ from .observables import (
     Observer,
     addObserver,
     observable,
+    filtered,
+    AfterChanger,
 )
 from .rescheduling import Rescheduler
 from .sessions import (
@@ -102,6 +102,72 @@ def intervalOverlap(
         (startTimeA <= endTimeB)
         and (endTimeA >= startTimeB)
         and (startTimeB <= endTimeA)
+    )
+
+
+def _observationSetup(nexus: Nexus) -> None:
+    """
+    Set up all the observers necessary to keep a L{Nexus}'s state consistent.
+    """
+
+    @Rescheduler
+    def intervalEndSchedule() -> Iterable[Cancellable]:
+        debug("rescheduling end interval")
+        yield nexus._scheduler.callAt(
+            nexus.currentInterval.endTime, nexus.endInterval
+        )
+        debug("end rescheduling end")
+
+
+    def startNewInterval(
+        oldInterval: AnyIntervalOrIdle | None, newInterval: AnyIntervalOrIdle
+    ) -> None:
+        if oldInterval is newInterval:
+            debug("early-exit restarting interval")
+            return
+        debug("***START NEW INTERVAL", newInterval, "from", oldInterval)
+        if (not isinstance(newInterval, Idle)) and (
+            # a bit of a hack here to avoid the case where, when
+            # deserializing, we need to mutate the current streak interval
+            # to point at the interval as it currently is, when it is
+            # initialized to an Idle by default
+            nexus._currentStreak[-1:]
+            != [newInterval]
+        ):
+            nexus._currentStreak.append(newInterval)
+        debug("***intervalStart UI")
+        nexus.userInterface.intervalStart(newInterval)
+        # debug("***intervalProgress UI")
+        nexus.userInterface.intervalProgress(0.0)
+        # debug("done with new interval start")
+
+    def startNewSession(
+        oldSession: Session | None, newSession: Session | None
+    ) -> None:
+        debug("session changed from", oldSession, "to", newSession)
+        if newSession is not None and not isinstance(
+            nexus.currentInterval, Idle
+        ):
+            debug(
+                "Session starting while existing interval running",
+                nexus.currentInterval,
+            )
+            return
+        if newSession is None:
+            if oldSession is None:
+                # set from none to none; silly, but no-op
+                return
+            refTime = oldSession.end
+        else:
+            refTime = newSession.start
+        nexus.currentInterval = idleOrPrompt(nexus, newSession, refTime)
+
+    justCurrentInterval = filtered(nexus, "currentInterval")
+    intervalEndSchedule.observe(justCurrentInterval)
+    addObserver(justCurrentInterval, AfterChanger(startNewInterval))
+    addObserver(
+        filtered(nexus._sessionManager, "activeSession"),
+        AfterChanger(startNewSession),
     )
 
 
@@ -180,97 +246,7 @@ class Nexus:
         debug("new interval started")
 
     def __post_init__(self) -> None:
-
-        @Rescheduler
-        def intervalEndSchedule() -> Iterable[Cancellable]:
-            yield self._scheduler.callAt(
-                self.currentInterval.endTime, self.endInterval
-            )
-
-        def filtered(observee: object, name: str) -> Changes[str, object]:
-            filter: Filter[str, object] = Filter(name)
-            addObserver(observee, filter)
-            return filter
-
-        justCurrentInterval = filtered(self, "currentInterval")
-        intervalEndSchedule.observe(justCurrentInterval)
-
-        def startNewInterval(
-            oldInterval: AnyIntervalOrIdle | None,
-            newInterval: AnyIntervalOrIdle,
-        ) -> None:
-            if oldInterval is newInterval:
-                debug("early-exit restarting interval")
-                return
-            debug("***START NEW INTERVAL", newInterval, "from", oldInterval)
-            if (not isinstance(newInterval, Idle)) and (
-                # a bit of a hack here to avoid the case where, when
-                # deserializing, we need to mutate the current streak interval
-                # to point at the interval as it currently is, when it is
-                # initialized to an Idle by default
-                self._currentStreak[-1:]
-                != [newInterval]
-            ):
-                self._currentStreak.append(newInterval)
-            debug("***intervalStart UI")
-            self.userInterface.intervalStart(newInterval)
-            # debug("***intervalProgress UI")
-            self.userInterface.intervalProgress(0.0)
-            # debug("done with new interval start")
-
-        @dataclass
-        class AfterChanger:
-            change: Callable[[Any, Any], None]
-
-            @contextmanager
-            def added(self, key: str, new: Any) -> Iterator[None]:
-                debug("added!")
-                yield
-                self.change(None, new)
-
-            @contextmanager
-            def changed(
-                self, key: str, old: object, new: Any
-            ) -> Iterator[None]:
-                debug("changed!")
-                yield
-                self.change(old, new)
-
-            @contextmanager
-            def removed(self, key: str, old: Any) -> Iterator[None]:
-                assert 0, "this should not be removed"
-                yield
-
-            def child(self, key: str) -> Changes[Any, Any]:
-                # TODO: should not actually ignore changes on sub-objects
-                return IgnoreChanges
-
-        def startNewSession(
-            oldSession: Session | None, newSession: Session | None
-        ) -> None:
-            debug("session changed from", oldSession, "to", newSession)
-            if newSession is not None and not isinstance(
-                self.currentInterval, Idle
-            ):
-                debug(
-                    "Session starting while existing interval running",
-                    self.currentInterval,
-                )
-                return
-            if newSession is None:
-                if oldSession is None:
-                    # set from none to none; silly, but no-op
-                    return
-                refTime = oldSession.end
-            else:
-                refTime = newSession.start
-            self.currentInterval = idleOrPrompt(self, newSession, refTime)
-
-        addObserver(justCurrentInterval, AfterChanger(startNewInterval))
-        addObserver(
-            filtered(self._sessionManager, "activeSession"),
-            AfterChanger(startNewSession),
-        )
+        _observationSetup(self)
 
     def blank(self) -> Nexus:
         """
@@ -476,7 +452,9 @@ class Nexus:
                    the pomodoro {pomodoro} is not ended yet, but it is not the
                    active interval {active}
                    """
+                debug("setting end time")
                 pomodoro.endTime = timestamp
+                debug("done setting end time")
                 # nb: endInterval assigns the new interval which cancels the
                 # interval-end timer so we won't double-end
                 self.endInterval()
