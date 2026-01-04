@@ -92,9 +92,10 @@ def _noUIFactory(nexus: Nexus) -> UIEventListener:
 
 
 def intervalOverlap(
-    startTimeA: float, endTimeA: float, startTimeB: float, endTimeB: float
+    startTimeA: float, endTimeA: float, interval: AnyIntervalOrIdle
 ) -> bool:
-
+    startTimeB = interval.startTime
+    endTimeB = interval.endTime
     assert startTimeA <= endTimeA
     assert startTimeB <= endTimeB
 
@@ -294,9 +295,7 @@ class Nexus:
     ) -> Iterable[AnyStreakInterval]:
         for streak in self._previousStreaks + [self._currentStreak]:
             for interval in streak:
-                if intervalOverlap(
-                    startTime, endTime, interval.startTime, interval.endTime
-                ):
+                if intervalOverlap(startTime, endTime, interval):
                     yield interval
 
     def scoreEvents(
