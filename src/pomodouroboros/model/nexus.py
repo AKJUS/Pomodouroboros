@@ -92,7 +92,7 @@ def _noUIFactory(nexus: Nexus) -> UIEventListener:
 
 
 def intervalOverlap(
-    startTimeA: float, endTimeA: float, interval: AnyIntervalOrIdle
+    startTimeA: float, endTimeA: float, interval: AnyStreakInterval
 ) -> bool:
     startTimeB = interval.startTime
     endTimeB = interval.endTime
