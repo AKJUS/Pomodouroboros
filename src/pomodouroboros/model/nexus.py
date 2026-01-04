@@ -110,11 +110,28 @@ def _observationSetup(nexus: Nexus) -> None:
     Set up all the observers necessary to keep a L{Nexus}'s state consistent.
     """
 
+    def endInterval() -> None:
+        # FIXME: this should not be a stand-alone method exposed for other
+        # objects to call, it's an internal state thing that is only called
+        # because the state-change observation isn't catching changes to
+        # Pomodoro objects when their interval end is set.
+        debug("ending interval", nexus.currentInterval)
+        nexus.userInterface.intervalProgress(1.0)
+        nexus.userInterface.intervalEnd()
+        newInterval = nexus.currentInterval.buildNextInterval(
+            nexus,
+            nexus._sessionManager.activeSession,
+            nexus._upcomingDurations,
+        )
+        debug("starting new interval", newInterval)
+        nexus.currentInterval = newInterval
+        debug("new interval started")
+
     @Rescheduler
     def intervalEndSchedule() -> Iterable[Cancellable]:
         debug("rescheduling end interval")
         yield nexus._scheduler.callAt(
-            nexus.currentInterval.endTime, nexus.endInterval
+            nexus.currentInterval.endTime, endInterval
         )
         debug("end rescheduling end")
 
@@ -227,23 +244,6 @@ class Nexus:
         default_factory=lambda: Idle(0.0, inf)
     )
     observer: Observer = IgnoreChanges
-
-    def endInterval(self) -> None:
-        # FIXME: this should not be a stand-alone method exposed for other
-        # objects to call, it's an internal state thing that is only called
-        # because the state-change observation isn't catching changes to
-        # Pomodoro objects when their interval end is set.
-        debug("ending interval", self.currentInterval)
-        self.userInterface.intervalProgress(1.0)
-        self.userInterface.intervalEnd()
-        newInterval = self.currentInterval.buildNextInterval(
-            self,
-            self._sessionManager.activeSession,
-            self._upcomingDurations,
-        )
-        debug("starting new interval", newInterval)
-        self.currentInterval = newInterval
-        debug("new interval started")
 
     def __post_init__(self) -> None:
         _observationSetup(self)
