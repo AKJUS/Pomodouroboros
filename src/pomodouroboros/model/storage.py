@@ -137,6 +137,7 @@ def nexusFromJSON(
             dailyStart=loadOneTime(savedRule["dailyStart"]),
             dailyEnd=loadOneTime(savedRule["dailyEnd"]),
             days={Weekday(each) for each in savedRule["days"]},
+            enabled=savedRule.get("enabled", True),
         )
 
     lastUpdateTime = saved["lastUpdateTime"]
@@ -338,6 +339,7 @@ def nexusToJSON(nexus: Nexus) -> SavedNexus:
                     "time": rule.dailyEnd.isoformat(),
                 },
                 "days": [day.value for day in rule.days],
+                "enabled": rule.enabled,
             }
             for rule in nexus._sessionManager.rules
         ],

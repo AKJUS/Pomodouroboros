@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="24506" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="24506"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -20,7 +20,7 @@
             <windowCollectionBehavior key="collectionBehavior" moveToActiveSpace="YES" stationary="YES" ignoresCycle="YES" fullScreenAuxiliary="YES"/>
             <windowPositionMask key="initialPositionMask" topStrut="YES"/>
             <rect key="contentRect" x="112" y="550" width="1400" height="400"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1055"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
             <view key="contentView" id="aNg-of-5Uy">
                 <rect key="frame" x="0.0" y="0.0" width="1400" height="400"/>
                 <autoresizingMask key="autoresizingMask"/>

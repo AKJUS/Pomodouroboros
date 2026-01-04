@@ -342,15 +342,8 @@ def synthesizeRuleWhenSet(
 
         if self.awoken:
             """
-            TODO: this is a horrible hack:
-
-                1. we only allow for editing of a single rule, we should either
-                   make the model reflect that or make the UI able to edit
-                   multiple
-
-                2. the rule really ought to be a part of the active session
-                   manager, which is where session logic is moving, but for now
-                   this should at least do something
+            TODO: we only allow for editing of a single rule, we should either
+            make the model reflect that or make the UI able to edit multiple
             """
             newRule = self.synthesizeRule()
             self.nexus._sessionManager.rules[:1] = [newRule]
@@ -449,6 +442,7 @@ class AutoStreakRuleValues(NSObject):
                 rule.dailyEnd.minute,
                 endAMPM,
             )
+            self.shouldAutoStart = rule.enabled
 
     def synthesizeRule(self) -> DailySessionRule:
         days = set()
@@ -469,6 +463,7 @@ class AutoStreakRuleValues(NSObject):
                 )
             ),
             days=days,
+            enabled=self.shouldAutoStart,
         )
 
 

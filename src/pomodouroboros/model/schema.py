@@ -54,6 +54,7 @@ SavedRule = TypedDict(
         "dailyStart": SavedTime,
         "dailyEnd": SavedTime,
         "days": list[int],
+        "enabled": NotRequired[bool],
     },
 )
 SavedEvaluationResult = Literal[

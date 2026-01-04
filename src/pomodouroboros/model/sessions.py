@@ -96,6 +96,7 @@ class DailySessionRule:
     dailyStart: Time[None]
     dailyEnd: Time[None]
     days: set[Weekday]
+    enabled: bool = True
 
     def startRule(self) -> EachDTRule:
         return EachWeekOn(
@@ -170,6 +171,8 @@ class SessionManager:
         debug("dtRef TIME", dtRef)
         potentials = []
         for rule in self.rules:
+            if not rule.enabled:
+                continue
             steps, nextRef = rule.startRule()(
                 dtRef, dtRef + MAX_SESSION_LENGTH
             )
@@ -262,6 +265,8 @@ class SessionManager:
         @Rescheduler
         def rulesSchedule() -> Iterable[Cancellable]:
             for rule in self.rules:
+                if not rule.enabled:
+                    continue
                 with StatefulCancel.create() as sc:
                     repeatedly(
                         dateScheduler,

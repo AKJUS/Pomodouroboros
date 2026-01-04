@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23727" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="24506" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" customObjectInstantitationMethod="direct">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23727"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="24506"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <objects>
@@ -393,7 +393,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="0.0" y="0.0" width="823" height="682"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1055"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
             <view key="contentView" identifier="DebugView" id="aq4-PH-dd2" userLabel="DebugView">
                 <rect key="frame" x="0.0" y="0.0" width="823" height="682"/>
                 <autoresizingMask key="autoresizingMask"/>
@@ -402,11 +402,11 @@
                         <rect key="frame" x="170" y="62" width="559" height="525"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <view key="contentView" id="l5T-sX-z0W">
-                            <rect key="frame" x="4" y="5" width="551" height="505"/>
+                            <rect key="frame" x="0.0" y="0.0" width="559" height="513"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <customView id="VlE-4q-xz9" userLabel="Debugging Pie Timer" customClass="PieTimer">
-                                    <rect key="frame" x="0.0" y="0.0" width="551" height="505"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="559" height="513"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="percentage">
@@ -435,11 +435,11 @@
                         <rect key="frame" x="322" y="584" width="252" height="97"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMinY="YES"/>
                         <view key="contentView" id="WsK-id-Q4W">
-                            <rect key="frame" x="4" y="5" width="244" height="77"/>
+                            <rect key="frame" x="0.0" y="0.0" width="252" height="85"/>
                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                             <subviews>
                                 <customView id="bZS-Z4-xnK" userLabel="Debugging Pie Timer" customClass="PieTimer">
-                                    <rect key="frame" x="0.0" y="0.0" width="244" height="77"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="252" height="85"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <userDefinedRuntimeAttributes>
                                         <userDefinedRuntimeAttribute type="number" keyPath="percentage">
@@ -507,7 +507,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="457" y="348" width="934" height="680"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1055"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
             <value key="minSize" type="size" width="600" height="600"/>
             <view key="contentView" id="Qzr-8h-V2F">
                 <rect key="frame" x="0.0" y="0.0" width="934" height="680"/>
@@ -722,7 +722,7 @@
                                                                         <autoresizingMask key="autoresizingMask"/>
                                                                     </scroller>
                                                                     <scroller key="verticalScroller" wantsLayer="YES" verticalHuggingPriority="750" horizontal="NO" id="rpv-j9-n60">
-                                                                        <rect key="frame" x="626" y="0.0" width="16" height="64"/>
+                                                                        <rect key="frame" x="625" y="0.0" width="17" height="64"/>
                                                                         <autoresizingMask key="autoresizingMask"/>
                                                                     </scroller>
                                                                 </scrollView>
@@ -881,7 +881,7 @@
                                                                         </subviews>
                                                                     </clipView>
                                                                     <scroller key="horizontalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="ZCH-ad-fx0">
-                                                                        <rect key="frame" x="1" y="180" width="640" height="16"/>
+                                                                        <rect key="frame" x="1" y="179" width="640" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask"/>
                                                                     </scroller>
                                                                     <scroller key="verticalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="NO" id="4ad-Oo-DAy">
@@ -1120,7 +1120,7 @@
                                                                         </subviews>
                                                                     </clipView>
                                                                     <scroller key="horizontalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="t0k-Ob-Bb1">
-                                                                        <rect key="frame" x="1" y="151" width="640" height="16"/>
+                                                                        <rect key="frame" x="1" y="150" width="640" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask"/>
                                                                     </scroller>
                                                                     <scroller key="verticalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="NO" id="KoL-Ml-YrB">
@@ -1466,8 +1466,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="0VN-am-jg8">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="774902984.75930405">
-                                                    <!--2025-07-22 18:49:44 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="789205784.92728996">
+                                                    <!--2026-01-04 07:49:44 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1604,7 +1604,10 @@
                                                     <rect key="frame" x="68" y="42" width="31" height="21"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" alignment="right" title="StartHour" drawsBackground="YES" id="ebJ-hB-8y5">
-                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="aVv-58-BFm"/>
+                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="aVv-58-BFm">
+                                                            <real key="minimum" value="1"/>
+                                                            <real key="maximum" value="12"/>
+                                                        </numberFormatter>
                                                         <font key="font" metaFont="system"/>
                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1617,7 +1620,10 @@
                                                     <rect key="frame" x="111" y="42" width="31" height="21"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="StartMinute" drawsBackground="YES" id="6ba-zd-pyM">
-                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="ds3-so-EOX"/>
+                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="ds3-so-EOX">
+                                                            <real key="minimum" value="0.0"/>
+                                                            <real key="maximum" value="60"/>
+                                                        </numberFormatter>
                                                         <font key="font" metaFont="system"/>
                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1665,7 +1671,10 @@
                                                     <rect key="frame" x="229" y="42" width="31" height="21"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" alignment="right" title="HH" drawsBackground="YES" id="Q9z-Yl-Gwx">
-                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="KGL-wa-9f4"/>
+                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="KGL-wa-9f4">
+                                                            <real key="minimum" value="1"/>
+                                                            <real key="maximum" value="12"/>
+                                                        </numberFormatter>
                                                         <font key="font" metaFont="system"/>
                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1678,7 +1687,10 @@
                                                     <rect key="frame" x="272" y="42" width="31" height="21"/>
                                                     <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
                                                     <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="MM" drawsBackground="YES" id="2Qf-Yx-qtO">
-                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="Uw1-Nw-m4N"/>
+                                                        <numberFormatter key="formatter" formatterBehavior="default10_4" usesGroupingSeparator="NO" formatWidth="-1" groupingSize="0" minimumIntegerDigits="1" maximumIntegerDigits="42" id="Uw1-Nw-m4N">
+                                                            <real key="minimum" value="0.0"/>
+                                                            <real key="maximum" value="60"/>
+                                                        </numberFormatter>
                                                         <font key="font" metaFont="system"/>
                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
                                                         <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1736,7 +1748,7 @@
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <clipView key="contentView" id="EK0-LK-6Fz">
                                                 <rect key="frame" x="1" y="1" width="912" height="552"/>
-                                                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                                <autoresizingMask key="autoresizingMask"/>
                                                 <subviews>
                                                     <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="lastColumnOnly" multipleSelection="NO" autosaveColumns="NO" rowSizeStyle="automatic" headerView="V1p-0o-RjX" viewBased="YES" id="4uX-Ob-Ov1">
                                                         <rect key="frame" x="0.0" y="0.0" width="1101" height="524"/>
@@ -1758,7 +1770,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="p9g-rp-YwG">
-                                                                        <rect key="frame" x="8" y="0.0" width="63" height="24"/>
+                                                                        <rect key="frame" x="18" y="0.0" width="63" height="24"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="i5q-ax-LxL">
@@ -1790,7 +1802,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="1Op-K9-AdN">
-                                                                        <rect key="frame" x="88" y="0.0" width="114" height="24"/>
+                                                                        <rect key="frame" x="98" y="0.0" width="114" height="24"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="1PA-j6-KGH">
@@ -1822,7 +1834,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="kXM-5H-p28">
-                                                                        <rect key="frame" x="219" y="0.0" width="68" height="17"/>
+                                                                        <rect key="frame" x="229" y="0.0" width="68" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="QCx-3x-KQw">
@@ -1854,7 +1866,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="rv0-3J-o3U">
-                                                                        <rect key="frame" x="304" y="0.0" width="66" height="17"/>
+                                                                        <rect key="frame" x="314" y="0.0" width="66" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="6hz-9R-hq0">
@@ -1886,7 +1898,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="lIb-FI-pmK">
-                                                                        <rect key="frame" x="387" y="0.0" width="110" height="17"/>
+                                                                        <rect key="frame" x="397" y="0.0" width="110" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7M8-B3-ixA">
@@ -1918,7 +1930,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="iWu-ZR-dyE">
-                                                                        <rect key="frame" x="514" y="0.0" width="108" height="17"/>
+                                                                        <rect key="frame" x="524" y="0.0" width="108" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="USr-Ms-22t">
@@ -1950,7 +1962,7 @@
                                                                 <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                                 <prototypeCellViews>
                                                                     <tableCellView id="89f-Uc-Nqt">
-                                                                        <rect key="frame" x="639" y="0.0" width="453" height="17"/>
+                                                                        <rect key="frame" x="649" y="0.0" width="453" height="17"/>
                                                                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                                         <subviews>
                                                                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="GIr-qY-Kly">
@@ -1974,7 +1986,7 @@
                                                 </subviews>
                                             </clipView>
                                             <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" horizontal="YES" id="F7J-jD-xzY">
-                                                <rect key="frame" x="1" y="537" width="912" height="16"/>
+                                                <rect key="frame" x="1" y="536" width="912" height="17"/>
                                                 <autoresizingMask key="autoresizingMask"/>
                                             </scroller>
                                             <scroller key="verticalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="NO" id="d8v-0A-1Ps">
@@ -2000,8 +2012,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="2ek-VJ-F3s">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="774902984.77151203">
-                                                    <!--2025-07-22 18:49:44 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="789205784.93947804">
+                                                    <!--2026-01-04 07:49:44 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
