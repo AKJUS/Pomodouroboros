@@ -109,6 +109,12 @@
                                     <action selector="addStackButton:" target="-2" id="hZp-lo-W19"/>
                                 </connections>
                             </menuItem>
+                            <menuItem title="Show Debug Window" id="uem-Vu-A7y" userLabel="Show Debug Window">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="makeKeyAndOrderFront:" target="gbA-hh-7vy" id="JGb-to-dKS"/>
+                                </connections>
+                            </menuItem>
                             <menuItem title="Close" keyEquivalent="w" id="Ooe-h7-1HU">
                                 <connections>
                                     <action selector="performClose:" target="-1" id="EMM-XP-UgF"/>
@@ -389,11 +395,11 @@
             </items>
             <point key="canvasLocation" x="-4286" y="-3188"/>
         </menu>
-        <window title="Debug!" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" frameAutosaveName="" animationBehavior="default" id="gbA-hh-7vy">
+        <window title="Debug!" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" frameAutosaveName="" animationBehavior="default" id="gbA-hh-7vy">
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="0.0" y="0.0" width="823" height="682"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1049"/>
             <view key="contentView" identifier="DebugView" id="aq4-PH-dd2" userLabel="DebugView">
                 <rect key="frame" x="0.0" y="0.0" width="823" height="682"/>
                 <autoresizingMask key="autoresizingMask"/>
@@ -507,7 +513,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="457" y="348" width="934" height="680"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1049"/>
             <value key="minSize" type="size" width="600" height="600"/>
             <view key="contentView" id="Qzr-8h-V2F">
                 <rect key="frame" x="0.0" y="0.0" width="934" height="680"/>
@@ -1466,8 +1472,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="0VN-am-jg8">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="789205784.92728996">
-                                                    <!--2026-01-04 07:49:44 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="789503514.66225302">
+                                                    <!--2026-01-07 18:31:54 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2012,8 +2018,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="2ek-VJ-F3s">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="789205784.93947804">
-                                                    <!--2026-01-04 07:49:44 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="789503514.67673004">
+                                                    <!--2026-01-07 18:31:54 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
