@@ -209,7 +209,7 @@ class Nexus:
     The manager of and creator of session objects.
     """
 
-    _intentions: MutableSequence[Intention] = field(
+    _intentions: ObservableList[Intention] = field(
         default_factory=lambda: ObservableList(IgnoreChanges)
     )
     "A list of all the intentions that the user has specified."
@@ -343,7 +343,7 @@ class Nexus:
         return self._userInterface
 
     @property
-    def intentions(self) -> Sequence[Intention]:
+    def intentions(self) -> ObservableList[Intention]:
         return self._intentions
 
     @property
