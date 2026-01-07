@@ -929,26 +929,29 @@ class AfterChanger:
     """
 
     change: Callable[[Any, Any], None]
+    descend: bool = False
 
     @contextmanager
-    def added(self, key: str, new: Any) -> Iterator[None]:
+    def added(self, key: Any, new: Any) -> Iterator[None]:
         debug("added!")
         yield
         self.change(None, new)
 
     @contextmanager
-    def changed(self, key: str, old: object, new: Any) -> Iterator[None]:
+    def changed(self, key: Any, old: object, new: Any) -> Iterator[None]:
         debug("changed!")
         yield
         self.change(old, new)
 
     @contextmanager
-    def removed(self, key: str, old: Any) -> Iterator[None]:
+    def removed(self, key: Any, old: Any) -> Iterator[None]:
         assert 0, "this should not be removed"
         yield
 
-    def child(self, key: str) -> Changes[Any, Any]:
+    def child(self, key: Any) -> Changes[Any, Any]:
         # TODO: should not actually ignore changes on sub-objects
+        if self.descend:
+            return self
         return IgnoreChanges
 
         # okay so when you're requesting a child observer you need to know what

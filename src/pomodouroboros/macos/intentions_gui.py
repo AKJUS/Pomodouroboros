@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime
-from typing import TYPE_CHECKING, Iterator, Sequence
+from typing import TYPE_CHECKING, Iterator, Sequence, Iterable
 
 import objc
 from AppKit import NSTableView
 from Foundation import NSColor, NSObject
 from objc import IBAction, IBOutlet, super
 
-from ..model.observables import addObserver, AfterChanger
+from ..model.observables import ObservableList, IgnoreChanges
 from ..model.boundaries import EvaluationResult
 from ..model.debugger import debug
 from ..model.intention import Intention
 from ..model.intervals import Pomodoro
 from ..model.nexus import Nexus
+from ..model.observables import AfterChanger, addObserver
 from ..model.util import interactionRoot, showFailures
 from .mac_dates import LOCAL_TZ
 from .mac_utils import Attr, Forwarder
@@ -149,6 +150,8 @@ class IntentionDataSource(NSObject):
     intentionsTable: NSTableView
     intentionsTable = IBOutlet()
 
+    filteredIntentions: ObservableList[Intention]
+
     # pragma mark Initialization and awakening
 
     def init(self) -> IntentionDataSource:
@@ -159,6 +162,7 @@ class IntentionDataSource(NSObject):
         self.selectedIntention = None
         self.canStartPomodoro = False
         self.canAbandonIntention = False
+        self.filteredIntentions = ObservableList(IgnoreChanges)
         return self
 
     def awakeWithNexus_(self, newNexus: Nexus) -> None:
@@ -179,11 +183,29 @@ class IntentionDataSource(NSObject):
         self.intentionRowMap = translator
 
         def refreshMyTable(
-            oldValue: Intention | None, newValue: Intention | None
+            oldValue: Intention | Iterable[Intention] | None,
+            newValue: Intention | Iterable[Intention] | None,
         ) -> None:
             self.intentionsTable.reloadData()
 
-        addObserver(newNexus.intentions, AfterChanger(refreshMyTable))
+        def refilterObserver(
+            oldValue: Intention | Iterable[Intention] | None,
+            newValue: Intention | Iterable[Intention] | None,
+        ) -> None:
+            self.refilter()
+
+        addObserver(self.filteredIntentions, AfterChanger(refreshMyTable))
+        addObserver(newNexus.intentions, AfterChanger(refilterObserver, True))
+        self.refilter()
+
+    def refilter(self) -> None:
+        nexus = self.nexus
+        assert nexus is not None
+        self.filteredIntentions[:] = [
+            each
+            for each in nexus.intentions
+            if not each.abandoned and not each.completed
+        ]
         self.recalculate()
 
     # pragma mark My own methods
@@ -193,7 +215,7 @@ class IntentionDataSource(NSObject):
         Look up a row object at the given index.
         """
         assert self.nexus is not None
-        return self.intentionRowMap[self.nexus.intentions[index]]
+        return self.intentionRowMap[self.filteredIntentions[index]]
 
     # pragma mark NSTableViewDelegate
 
@@ -257,7 +279,7 @@ class IntentionDataSource(NSObject):
         """
         if self.nexus is None:
             return 0
-        result = len(self.nexus.intentions)
+        result = len(self.filteredIntentions)
         return result
 
     def tableView_objectValueForTableColumn_row_(
@@ -380,7 +402,7 @@ class IntentionPomodorosDataSource(NSObject):
 
         with refreshedData(self.intentionsTable, self.intentionPomsTable):
             self.nexus.evaluatePomodoro(self.selectedPomodoro, er, time())
-            self.allIntentionsSource.recalculate()
+            self.allIntentionsSource.refilter()
 
     @IBAction
     @interactionRoot

@@ -132,11 +132,18 @@ class MacUserInterface:
                 self.pc.hide()
                 self.intentionDataSource.startingUnblocked()
                 self.setExplanation("Idle.")
-                self.pc.setColors(NSColor.systemMintColor(), NSColor.systemBrownColor())
+                self.pc.setColors(
+                    NSColor.systemMintColor(), NSColor.systemBrownColor()
+                )
         self.pc.immediateReticleUpdate(self.clock)
 
     def intervalProgress(self, percentComplete: float) -> None:
-        debug("updating percentage:", percentComplete, "for interval", self.currentInterval)
+        debug(
+            "updating percentage:",
+            percentComplete,
+            "for interval",
+            self.currentInterval,
+        )
         match self.currentInterval:
             case StartPrompt():
                 debug("StartPrompt update")
@@ -540,7 +547,9 @@ class PomFilesOwner(NSObject):
         """
         self.nexus.addIntention()
         self.intentionsTable.selectRowIndexes_byExtendingSelection_(
-            NSIndexSet.indexSetWithIndex_(len(self.nexus.intentions) - 1),
+            NSIndexSet.indexSetWithIndex_(
+                len(self.intentionDataSource.filteredIntentions) - 1
+            ),
             False,
         )
         self.intentionsWindow.makeFirstResponder_(self.intentionsTitleField)
@@ -565,7 +574,7 @@ class PomFilesOwner(NSObject):
         assert intent is not None, "how did you get here"
         intent.intention.abandoned = True
         debug("set intention abandoned", intent.intention)
-        self.intentionDataSource.recalculate()
+        self.intentionDataSource.refilter()
 
     @IBAction
     @interactionRoot
