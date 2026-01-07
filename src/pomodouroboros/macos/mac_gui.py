@@ -539,7 +539,6 @@ class PomFilesOwner(NSObject):
         The 'new intention' button was clicked.
         """
         self.nexus.addIntention()
-        self.intentionsTable.reloadData()
         self.intentionsTable.selectRowIndexes_byExtendingSelection_(
             NSIndexSet.indexSetWithIndex_(len(self.nexus.intentions) - 1),
             False,

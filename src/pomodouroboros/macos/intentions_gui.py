@@ -9,6 +9,7 @@ from AppKit import NSTableView
 from Foundation import NSColor, NSObject
 from objc import IBAction, IBOutlet, super
 
+from ..model.observables import addObserver, AfterChanger
 from ..model.boundaries import EvaluationResult
 from ..model.debugger import debug
 from ..model.intention import Intention
@@ -176,6 +177,13 @@ class IntentionDataSource(NSObject):
             )
 
         self.intentionRowMap = translator
+
+        def refreshMyTable(
+            oldValue: Intention | None, newValue: Intention | None
+        ) -> None:
+            self.intentionsTable.reloadData()
+
+        addObserver(newNexus.intentions, AfterChanger(refreshMyTable))
         self.recalculate()
 
     # pragma mark My own methods
@@ -207,8 +215,9 @@ class IntentionDataSource(NSObject):
 
     def recalculate(self) -> None:
         """
-        Recompute various UI-state attributes after the selection changes, like whether we can start a
-        pomodoro, whether we can abandon the selected intention, etc.
+        Recompute various UI-state attributes after the selection changes, like
+        whether we can start a pomodoro, whether we can abandon the selected
+        intention, etc.
         """
         if self.intentionsTable is None:
             debug("recalculate before awake?")
@@ -368,6 +377,7 @@ class IntentionPomodorosDataSource(NSObject):
         ), "must have a pomodorodo selected and the UI should be enforcing that"
         # FIXME: pass reactor or fritter real-time float-scheduler in here somewhere
         from time import time
+
         with refreshedData(self.intentionsTable, self.intentionPomsTable):
             self.nexus.evaluatePomodoro(self.selectedPomodoro, er, time())
             self.allIntentionsSource.recalculate()
