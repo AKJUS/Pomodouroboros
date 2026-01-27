@@ -60,6 +60,15 @@ lightPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.7, 0.0, 0.7, 1.0)
 darkPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.5, 0.0, 0.5, 1.0)
 
 
+class TestViewCollection(NSObject):
+    """
+    References to various UI objects needed for testing.
+    """
+
+    showCompletedCheckbox = IBOutlet()
+    showAbandonedCheckbox = IBOutlet()
+    intentionsTableView = IBOutlet()
+
 @dataclass
 class MacUserInterface:
     """
@@ -72,6 +81,7 @@ class MacUserInterface:
     explanatoryLabel: HeightSizableTextField
     intentionDataSource: IntentionDataSource
     currentInterval: AnyIntervalOrIdle
+    testViewCollection: TestViewCollection
 
     def startPromptUpdate(self, startPrompt: StartPrompt) -> None:
         """
@@ -239,6 +249,7 @@ class MacUserInterface:
             makeMenuLabel(status.item.menu()),
             owner.intentionDataSource,
             nexus.currentInterval,  # TODO: we shouldn't need to pass this
+            owner.testViewCollection,
         )
         self.setExplanation("Starting Up...")
         return self
@@ -496,6 +507,9 @@ class PomFilesOwner(NSObject):
 
     autoStreakRuleValues: AutoStreakRuleValues
     autoStreakRuleValues = IBOutlet()
+
+    testViewCollection: TestViewCollection
+    testViewCollection = IBOutlet()
 
     if TYPE_CHECKING:
 

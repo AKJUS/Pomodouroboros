@@ -1,9 +1,7 @@
 from unittest import TestCase
 
 from AppKit import NSNib
-from objc import IBOutlet
 
-from ..progress_hud import PieTimer
 from ..hudmulti import HUDMultipleProgress
 
 
@@ -31,5 +29,5 @@ class NibInitializationTests(TestCase):
         for nib_name in self.NIB_NAMES:
             self.assertIsNotNone(
                 getattr(self.owner, nib_name),
-                f"The nib called owner.{nib_name} was instantiated early!",
+                f"The nib called owner.{nib_name} was not instantiated!",
             )

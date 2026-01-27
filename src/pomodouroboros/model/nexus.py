@@ -1,4 +1,6 @@
 # -*- test-case-name: pomodouroboros.model.test -*-
+from __future__ import annotations
+
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
