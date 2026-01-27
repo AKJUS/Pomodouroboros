@@ -40,7 +40,12 @@ class IntentionEditorTests(TestCase):
             _sessionManager=SessionManager.new(IgnoreChanges, sched, TZ),
         )
 
-    def test_ok(self) -> None:
+
+    def test_intentionFiltering(self) -> None:
+        """
+        Test for the two checkboxes to filter for completed and/or abandoned
+        intentions.
+        """
         # datetime.datetime(2026, 1, 27, 11, 2, 38, 449683, tzinfo=zoneinfo.ZoneInfo(key='US/Pacific'))
         self.clock.advance(1769540558.449683)
         active = self.nexus.addIntention("active")
@@ -97,3 +102,8 @@ class IntentionEditorTests(TestCase):
         self.assertEqual(
             self.testViewCollection.intentionsTableView.numberOfRows(), 3
         )
+    def test_justLoad(self) -> None:
+        """
+        A second test, just to ensure that if we perform the setup twice,
+        nothing crashes.
+        """
