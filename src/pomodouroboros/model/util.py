@@ -102,7 +102,7 @@ def interactionRoot(
             debug("start action:", c)
             result = c(self, *args, **kwargs)
             debug("save nexus:", result)
-            saveDefaultNexus(self.nexus)
+            self.nexus.save()
             debug("saved:", result)
             return result
 

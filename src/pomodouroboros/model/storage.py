@@ -405,6 +405,7 @@ def loadDefaultNexus(
         _sessionManager=SessionManager.new(
             IgnoreChanges, sched, guessLocalZone()
         ),
+        saveHook=saveDefaultNexus,
     )
 
 

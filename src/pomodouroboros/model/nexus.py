@@ -246,8 +246,22 @@ class Nexus:
     )
     observer: Observer = IgnoreChanges
 
+    @staticmethod
+    def _noSave(self: Nexus) -> None:
+        """
+        Default save implementation: do nothing.
+        """
+
+    saveHook: Callable[[Nexus], None] = _noSave
+
     def __post_init__(self) -> None:
         _observationSetup(self)
+
+    def save(self) -> None:
+        """
+        Save this L{Nexus} to its configured save location via L{saveHook}.
+        """
+        self.saveHook(self)
 
     def blank(self) -> Nexus:
         """
