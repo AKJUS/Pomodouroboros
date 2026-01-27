@@ -9,7 +9,7 @@ altgraph==0.17.5
     #   macholib
     #   modulegraph
     #   py2app
-anyio==4.12.0
+anyio==4.12.1
     # via httpx
 appdirs==1.4.4
     # via twisted
@@ -21,7 +21,7 @@ automat==25.4.16
     # via twisted
 bcrypt==5.0.0
     # via twisted
-certifi==2025.11.12
+certifi==2026.1.4
     # via
     #   httpcore
     #   httpx
@@ -41,7 +41,7 @@ datetype==2025.11.30
     #   Pomodouroboros (pyproject.toml)
     #   fritter
     #   quickmacapp
-fritter==0.1.0
+fritter==0.1.1
     # via Pomodouroboros (pyproject.toml)
 h11==0.16.0
     # via
@@ -61,7 +61,7 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-hypothesis==6.148.7
+hypothesis==6.151.2
     # via twisted
 idna==3.11
     # via
@@ -75,7 +75,7 @@ macholib==1.16.4
     # via py2app
 modulegraph==0.19.7
     # via py2app
-packaging==25.0
+packaging==26.0
     # via
     #   incremental
     #   py2app
@@ -83,13 +83,13 @@ priority==1.3.0
     # via twisted
 py2app==0.28.9
     # via Pomodouroboros (pyproject.toml)
-pyasn1==0.6.1
+pyasn1==0.6.2
     # via
     #   pyasn1-modules
     #   service-identity
 pyasn1-modules==0.4.2
     # via service-identity
-pycparser==2.23
+pycparser==3.0
     # via cffi
 pyhamcrest==2.1.0
     # via twisted
@@ -149,15 +149,15 @@ twisted==25.5.0
     #   quickmacapp
 typing-extensions==4.15.0
     # via twisted
-tzdata==2025.2
+tzdata==2025.3
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
 wsproto==1.3.2
     # via twisted
-zope-interface==8.1.1
+zope-interface==8.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==80.9.0
+setuptools==80.10.2
     # via modulegraph
