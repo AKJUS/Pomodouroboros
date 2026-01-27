@@ -152,6 +152,9 @@ class IntentionDataSource(NSObject):
 
     filteredIntentions: ObservableList[Intention]
 
+    showCompleted: bool = objc.object_property()
+    showAbandoned: bool = objc.object_property()
+
     # pragma mark Initialization and awakening
 
     def init(self) -> IntentionDataSource:
@@ -162,6 +165,8 @@ class IntentionDataSource(NSObject):
         self.selectedIntention = None
         self.canStartPomodoro = False
         self.canAbandonIntention = False
+        self.showCompleted = False
+        self.showAbandoned = False
         self.filteredIntentions = ObservableList(IgnoreChanges)
         return self
 
@@ -196,6 +201,24 @@ class IntentionDataSource(NSObject):
 
         addObserver(self.filteredIntentions, AfterChanger(refreshMyTable))
         addObserver(newNexus.intentions, AfterChanger(refilterObserver, True))
+        self.addObserver_forKeyPath_options_context_(
+            self, "showCompleted", 0, None
+        )
+        self.addObserver_forKeyPath_options_context_(
+            self, "showAbandoned", 0, None
+        )
+        self.refilter()
+
+    def observeValueForKeyPath_ofObject_change_context_(
+        self,
+        keyPath: str,
+        ofObject: object,
+        change: dict[str, object],
+        context: object,
+    ) -> None:
+        """
+        showCompleted / showAbandoned changed, so, re-filter
+        """
         self.refilter()
 
     def refilter(self) -> None:
@@ -204,7 +227,8 @@ class IntentionDataSource(NSObject):
         self.filteredIntentions[:] = [
             each
             for each in nexus.intentions
-            if not each.abandoned and not each.completed
+            if (self.showAbandoned or (not each.abandoned))
+            and (self.showCompleted or (not each.completed))
         ]
         self.recalculate()
 
