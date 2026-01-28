@@ -252,7 +252,10 @@ class SessionManager:
         for session in sessions:
             (upcoming if session.start > now else previous).append(session)
         active: Session | None
-        active = previous[0] if previous and previous[0].end > now else None
+        # TODO: test for correctly identifying active session at end, verifying
+        # `sessions` is sorted; this previously passed with previous[0] even
+        # though that is definitely a bug
+        active = previous[-1] if previous and previous[-1].end > now else None
         self = cls(
             observer=observer,
             upcomingSessions=upcoming,
