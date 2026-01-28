@@ -159,6 +159,7 @@ def nexusFromJSON(
     nexus = Nexus(
         scheduler,
         driver,
+        saveHook=saveHook,
         _lastIntentionID=int(saved["lastIntentionID"]),
         _intentions=ObservableList(IgnoreChanges, intentions),
         _upcomingDurations=iter(
