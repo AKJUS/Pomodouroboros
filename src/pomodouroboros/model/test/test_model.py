@@ -319,6 +319,82 @@ class NexusTests(TestCase):
             self.testUI.actions,
         )
 
+    def test_startPromptAfterStreakBreak(self) -> None:
+        """
+        After breaking a streak, another startprompt should be issued.
+        """
+        intention = self.nexus.addIntention("an intention")
+        self.nexus.addManualSession(1000, 2000)
+        self.advanceTime(1010)
+        self.nexus.startPomodoro(intention)
+        self.advanceTime(10)
+        interval = self.nexus.currentInterval
+        assert isinstance(interval, Pomodoro)
+        self.nexus.evaluatePomodoro(
+            interval, EvaluationResult.achieved, self.nexus._scheduler.now()
+        )
+        BREAK_INTERVAL = 310
+        self.advanceTime(BREAK_INTERVAL)
+        interval = self.nexus.currentInterval
+        assert isinstance(interval, GracePeriod)
+        toAdvance = (interval.endTime - self.nexus._scheduler.now()) + 10
+        self.advanceTime(toAdvance)
+        self.assertEqual(
+            [
+                TestInterval(
+                    interval=StartPrompt(
+                        startTime=1000,
+                        endTime=1400.0,
+                        pointsBeforeLoss=21.25,
+                        pointsAfterLoss=15.25,
+                    ),
+                    actualStartTime=1010.0,
+                    actualEndTime=1010.0,
+                    currentProgress=[0.0, 0.025, 1.0],
+                ),
+                TestInterval(
+                    interval=Pomodoro(
+                        startTime=1010.0,
+                        intention=intention,
+                        endTime=1020.0,
+                        indexInStreak=0,
+                        evaluation=Evaluation(
+                            result=EvaluationResult.achieved, timestamp=1020.0
+                        ),
+                    ),
+                    actualStartTime=1010.0,
+                    actualEndTime=1330.0,
+                    currentProgress=[0.0, 0.03333333333333333, 1.0, 1.0],
+                ),
+                TestInterval(
+                    interval=Break(startTime=1020.0, endTime=1320.0),
+                    actualStartTime=1330.0,
+                    actualEndTime=1330.0,
+                    currentProgress=[0.0, 1.0],
+                ),
+                TestInterval(
+                    interval=GracePeriod(
+                        startTime=1320.0, originalPomEnd=1920.0
+                    ),
+                    actualStartTime=1330.0,
+                    actualEndTime=1530.0,
+                    currentProgress=[0.0, 0.05, 1.0],
+                ),
+                TestInterval(
+                    interval=StartPrompt(
+                        startTime=1520.0,
+                        endTime=1700.0,
+                        pointsBeforeLoss=28.5,
+                        pointsAfterLoss=17.25,
+                    ),
+                    actualStartTime=1530.0,
+                    actualEndTime=None,
+                    currentProgress=[0.0, 0.05555555555555555],
+                ),
+            ],
+            self.testUI.actions,
+        )
+
     def test_startDuringSession(self) -> None:
         """
         When a session is running (and therefore, a 'start' prompt /
@@ -913,7 +989,7 @@ class NexusTests(TestCase):
                     currentProgress=[
                         0.0,  # 0.0 from starting the break; is this desirable?
                         0.0,  # 0.0 from advanceToTime being called immediately
-                              # after early-advance
+                        # after early-advance
                         1.0 / 300.0,  # 1 extra second / default break duration
                     ],
                 ),
