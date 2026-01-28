@@ -69,6 +69,7 @@ class TestViewCollection(NSObject):
     showAbandonedCheckbox = IBOutlet()
     intentionsTableView = IBOutlet()
 
+
 @dataclass
 class MacUserInterface:
     """
@@ -533,6 +534,13 @@ class PomFilesOwner(NSObject):
     @IBAction
     def quickChooseIntention_(self, sender: NSObject) -> None:
         pass
+
+    @IBAction
+    @interactionRoot
+    def newOneHourSession_(self, sender: NSObject) -> None:
+        self.nexus._sessionManager.addManualSession(
+            now := self.nexus._scheduler.now(), now + (60.0 * 60.0)
+        )
 
     @IBAction
     def addStackButton_(self, sender: NSObject) -> None:

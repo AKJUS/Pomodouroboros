@@ -18,7 +18,6 @@ from twisted.python.failure import Failure
 
 from .debugger import debug
 from .nexus import Nexus
-from .storage import saveDefaultNexus
 
 T = TypeVar("T")
 
@@ -86,7 +85,7 @@ def fallible(fc: Callable[P, None]) -> Callable[P, None]:
 
 
 def interactionRoot(
-    c: Callable[Concatenate[HN, P], T]
+    c: Callable[Concatenate[HN, P], T],
 ) -> Callable[Concatenate[HN, P], T]:
     """
     Decorator that should wrap every operation that potentially mutates the

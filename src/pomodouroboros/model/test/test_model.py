@@ -586,7 +586,9 @@ class NexusTests(TestCase):
             self.nexus._sessionManager.activeSession,
         )
         roundTripped = nexusFromJSON(
-            nexusToJSON(self.nexus), lambda nexus: self.nexus.userInterface
+            nexusToJSON(self.nexus),
+            lambda nexus: self.nexus.userInterface,
+            Nexus._noSave,
         )
         self.assertEqual(
             expectedSession,
@@ -874,6 +876,7 @@ class NexusTests(TestCase):
         roundTrip = nexusFromJSON(
             loads(dumps(nexusToJSON(self.nexus))),
             lambda nexus: self.nexus.userInterface,
+            Nexus._noSave,
         )
         self.maxDiff = 99999
         self.assertEqual(self.nexus._intentions, roundTrip._intentions)
@@ -917,7 +920,9 @@ class NexusTests(TestCase):
         self.assertEqual(
             self.nexus._sessionManager.rules,
             nexusFromJSON(
-                nexusToJSON(self.nexus), _noUIFactory
+                nexusToJSON(self.nexus),
+                _noUIFactory,
+                Nexus._noSave,
             )._sessionManager.rules,
         )
 

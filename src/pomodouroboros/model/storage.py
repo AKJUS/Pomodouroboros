@@ -21,6 +21,7 @@ from pomodouroboros.model.intervals import Idle
 from pomodouroboros.model.schema import SavedRule, SavedTime
 from pomodouroboros.model.sessions import DailySessionRule, Weekday
 
+from .debugger import debug
 from .boundaries import EvaluationResult, IntervalType, UserInterfaceFactory
 from .intention import Estimate, Intention
 from .intervals import (
@@ -51,6 +52,7 @@ from .sessions import Session, SessionManager
 def nexusFromJSON(
     saved: SavedNexus,
     userInterfaceFactory: UserInterfaceFactory,
+    saveHook: Callable[[Nexus], None],
     issueStartPrompts: bool = True,
 ) -> Nexus:
     """
@@ -383,35 +385,40 @@ def loadDefaultNexus(
         # TODO: probably need to be extremely careful before shipping to
         # end-users here, since failing to create a nexus makes the app
         # unlaunchable
-        loaded = nexusFromJSON(
+        self = nexusFromJSON(
             cast(
                 SavedNexus,
                 loadFromFile(defaultNexusFile),
             ),
             userInterfaceFactory,
+            saveDefaultNexus,
         )
-        loaded.advanceToTime(currentTime)
-        return loaded
-    # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
-    # interval
-    sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
-        driver := MemoryDriver()
-    )
-    return Nexus(
-        sched,
-        driver,
-        userInterfaceFactory,
-        0,
-        _sessionManager=SessionManager.new(
-            IgnoreChanges, sched, guessLocalZone()
-        ),
-        saveHook=saveDefaultNexus,
-    )
+        self.advanceToTime(currentTime)
+    else:
+        # See pomodouroboros.model.nexus.Nexus.blank() for an explanation fo this
+        # interval
+        sched: Scheduler[float, Callable[[], None], int] = schedulerFromDriver(
+            driver := MemoryDriver()
+        )
+        self = Nexus(
+            sched,
+            driver,
+            userInterfaceFactory,
+            0,
+            _sessionManager=SessionManager.new(
+                IgnoreChanges, sched, guessLocalZone()
+            ),
+            saveHook=saveDefaultNexus,
+        )
+    assert self.saveHook is saveDefaultNexus, "what???"
+    return self
 
 
 def saveDefaultNexus(nexus: Nexus) -> None:
     """
     Save a given nexus to the default file for the current user.
     """
+    debug("saving default nexus...")
     makedirs(dirname(defaultNexusFile), exist_ok=True)
     saveToFile(defaultNexusFile, nexusToJSON(nexus))
+    debug("saved.")

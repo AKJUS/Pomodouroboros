@@ -248,13 +248,12 @@ class Nexus:
     )
     observer: Observer = IgnoreChanges
 
-    @staticmethod
     def _noSave(self: Nexus) -> None:
         """
         Default save implementation: do nothing.
         """
 
-    saveHook: Callable[[Nexus], None] = _noSave
+    saveHook: Callable[[Nexus], None] = field(default=_noSave)
 
     def __post_init__(self) -> None:
         _observationSetup(self)
@@ -263,6 +262,7 @@ class Nexus:
         """
         Save this L{Nexus} to its configured save location via L{saveHook}.
         """
+        debug("invoking save hook", self.saveHook)
         self.saveHook(self)
 
     def blank(self) -> Nexus:
@@ -298,7 +298,7 @@ class Nexus:
         debug("constructing hypothetical")
         from .storage import nexusFromJSON, nexusToJSON
 
-        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory, False)
+        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory, Nexus._noSave, False)
         # Given that we are creating this hypothetical future to determine when
         # to emit our next start prompt, configure it such that advancing its
         # timeline will not recursively attempt to perform the same
