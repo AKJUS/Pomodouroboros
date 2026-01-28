@@ -658,7 +658,7 @@
                                                         </scrollView>
                                                         <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="SGX-72-L8F" userLabel="showCompleted checkbox">
                                                             <rect key="frame" x="20" y="1" width="34" height="14"/>
-                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                                             <buttonCell key="cell" type="check" title="✅" bezelStyle="regularSquare" imagePosition="left" controlSize="small" state="on" inset="2" id="7EY-ab-C3b">
                                                                 <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                                 <font key="font" metaFont="smallSystem"/>
@@ -669,7 +669,7 @@
                                                         </button>
                                                         <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5F1-Ie-PaW" userLabel="showAbandoned checkbox">
                                                             <rect key="frame" x="58" y="1" width="34" height="14"/>
-                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                                             <buttonCell key="cell" type="check" title="🪦" bezelStyle="regularSquare" imagePosition="left" controlSize="small" state="on" inset="2" id="W3l-5W-tsa">
                                                                 <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                                                 <font key="font" metaFont="smallSystem"/>
