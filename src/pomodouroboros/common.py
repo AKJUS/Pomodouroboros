@@ -57,4 +57,4 @@ def animatePct(
 
     lc = LoopingCall(updateSome)
     lc.clock = clock
-    return lc.start(1.0 / 30.0).addCallback(lambda ignored: None)
+    return lc.start(1.0 / 30.0, now=False).addCallback(lambda ignored: None)

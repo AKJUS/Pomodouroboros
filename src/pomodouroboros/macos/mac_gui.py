@@ -13,6 +13,7 @@ from AppKit import (
     NSTableView,
     NSTextField,
     NSWindow,
+    NSSplitView,
 )
 from datetype import aware, naive
 from Foundation import NSIndexSet, NSObject
@@ -632,6 +633,15 @@ class PomFilesOwner(NSObject):
                     NSIndexSet.indexSetWithIndex_(0),
                     False,
                 )
+
+    # NSSplitViewDelegate
+    def splitView_constrainSplitPosition_ofSubviewAt_(
+        self, view: NSSplitView, proposedPosition: float, dividerIndex: int
+    ) -> float:
+        """
+        Make sure that the leftmost split stays >= 200 so we don't lose track of it.
+        """
+        return max(proposedPosition, 200.0)
 
 
 @mainpoint()

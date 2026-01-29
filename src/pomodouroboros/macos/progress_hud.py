@@ -276,8 +276,6 @@ def textOpacityCurve(startTime: float, duration: float, now: float) -> float:
     return sin(((progressPercent * oomph) + oomph) * (pi / 2)) * maxOpacity
 
 
-
-
 @dataclass
 class ProgressController(object):
     """
@@ -341,7 +339,7 @@ class ProgressController(object):
             return o
 
         self._textReminderInProgress = (
-            lc.start(1 / 30)
+            lc.start(1 / 30, now=False)
             .addErrback(lambda f: f.trap(CancelledError))
             .addBoth(clearTRIP)
         )
