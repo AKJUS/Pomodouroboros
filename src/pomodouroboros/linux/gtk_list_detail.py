@@ -1,5 +1,5 @@
-
 from .platspec import GObject, Gtk, Gio
+
 
 class MyThing(GObject.Object):
     def __init__(self, aValue: int) -> None:
@@ -57,5 +57,6 @@ if __name__ == "__main__":
     # Run the application
     print("running?")
     from sys import argv
+
     app.run(argv)
     print("goodbye?")

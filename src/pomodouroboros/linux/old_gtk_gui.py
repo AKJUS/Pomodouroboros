@@ -5,6 +5,7 @@ Hopefully we can replace this with the new model (pomodouroboros.model) in not
 too long, but it's just too complex and unfinished to start with; hopefully
 some contributors will come along and help out once a linux version exists!
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,7 +22,14 @@ from twisted.internet.defer import Deferred
 
 from ..common import animatePct
 from ..pomcommon import poms2Dicts
-from ..pommodel import Break, Day, IntentionResponse, Interval, Pomodoro, IntentionResponse
+from ..pommodel import (
+    Break,
+    Day,
+    IntentionResponse,
+    Interval,
+    Pomodoro,
+    IntentionResponse,
+)
 from ..storage import DayLoader
 from .gobj_utils import gSimpleProp, bindLabelColumns
 from .gtk_progress_bar import MultiBar
@@ -74,6 +82,7 @@ class LinuxPomObserver:
             )
             print(f"setting intention for {pom}: {result}")
             self.loader.saveDay(self.day)
+
         # TODO: keep track of old description so we can change it back if this wasn't allowed
         model.connect("notify::description", change)
 

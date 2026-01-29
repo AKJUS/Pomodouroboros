@@ -152,7 +152,9 @@ class Pomodoro:
 
     evaluation: Evaluation | None = None
     intervalType: ClassVar[IntervalType] = IntervalType.Pomodoro
-    observer: Observer = field(default_factory=IgnoreChanges, compare=False, repr=False)
+    observer: Observer = field(
+        default_factory=IgnoreChanges, compare=False, repr=False
+    )
 
     def buildNextInterval(
         self,

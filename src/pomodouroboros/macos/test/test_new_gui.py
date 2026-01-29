@@ -40,7 +40,6 @@ class IntentionEditorTests(TestCase):
             _sessionManager=SessionManager.new(IgnoreChanges, sched, TZ),
         )
 
-
     def test_intentionFiltering(self) -> None:
         """
         Test for the two checkboxes to filter for completed and/or abandoned
@@ -102,6 +101,7 @@ class IntentionEditorTests(TestCase):
         self.assertEqual(
             self.testViewCollection.intentionsTableView.numberOfRows(), 3
         )
+
     def test_justLoad(self) -> None:
         """
         A second test, just to ensure that if we perform the setup twice,

@@ -18,8 +18,10 @@ defaultBaseLocation = FilePath(expanduser("~/.local/share/pomodouroboros"))
 if TEST_MODE:
     defaultBaseLocation = defaultBaseLocation.child("testing")
 
+
 def testingDay(date: Date) -> Day:
     return Day.forTesting()
+
 
 @dataclass
 class DayLoader:

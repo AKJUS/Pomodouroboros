@@ -298,7 +298,9 @@ class Nexus:
         debug("constructing hypothetical")
         from .storage import nexusFromJSON, nexusToJSON
 
-        hypothetical = nexusFromJSON(nexusToJSON(self), _noUIFactory, Nexus._noSave, False)
+        hypothetical = nexusFromJSON(
+            nexusToJSON(self), _noUIFactory, Nexus._noSave, False
+        )
         # Given that we are creating this hypothetical future to determine when
         # to emit our next start prompt, configure it such that advancing its
         # timeline will not recursively attempt to perform the same

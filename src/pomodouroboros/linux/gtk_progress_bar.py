@@ -155,7 +155,7 @@ class MultiBar:
         for bar, win in self._bars:
             bar.set_css_classes(cssClasses)
 
-    def setStyle(self, cssClass: str)-> None:
+    def setStyle(self, cssClass: str) -> None:
         self.setCssClasses(BASE_CLASSES + [cssClass])
 
     def percentage(self) -> float:

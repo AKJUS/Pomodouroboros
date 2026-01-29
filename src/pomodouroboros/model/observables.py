@@ -782,14 +782,18 @@ def _shouldBeObservable(
     """
     anno = getattr(annotation, "__origin__", None)
     return (
-        key
-        != observerName  # the observer should not be able to observe the
-        # observer changing
-    ) and (
-        not key.startswith(
-            "_"
-        )  # TODO: test for private attribute observability
-    ) and anno != ClassVar
+        (
+            key
+            != observerName  # the observer should not be able to observe the
+            # observer changing
+        )
+        and (
+            not key.startswith(
+                "_"
+            )  # TODO: test for private attribute observability
+        )
+        and anno != ClassVar
+    )
 
 
 @dataclass
@@ -848,7 +852,7 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
 
         setattr(cls, _observabilityHint, observerName)
         for k, v in originalAnnotations.items():
-            ov = _unstringify(cls,v)
+            ov = _unstringify(cls, v)
             if _shouldBeObservable(k, ov, observerName):
                 setattr(cls, k, _ObservableProperty(observerName, k))
         if observerIndex != 0:

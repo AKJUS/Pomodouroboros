@@ -1,4 +1,3 @@
-
 """
 Common UI logic for old-style L{.pommodel} objects.
 """
@@ -9,7 +8,6 @@ from typing import Iterable
 from pomodouroboros.pommodel import IntentionSuccess, Pomodoro
 
 from .pommodel import Day
-
 
 
 def poms2Dicts(

@@ -109,7 +109,9 @@ class UIEventListener(Protocol):
         estimates.
         """
 
-    def intervalObserver(self, interval: AnyIntervalOrIdle) -> Changes[str, object]:
+    def intervalObserver(
+        self, interval: AnyIntervalOrIdle
+    ) -> Changes[str, object]:
         """
         Return a change observer for the given C{interval}.
         """
@@ -121,23 +123,17 @@ class NoUserInterface(UIEventListener):
     Do-nothing implementation of a user interface.
     """
 
-    def describeCurrentState(self, description: str) -> None:
-        ...
+    def describeCurrentState(self, description: str) -> None: ...
 
-    def intervalStart(self, interval: AnyIntervalOrIdle) -> None:
-        ...
+    def intervalStart(self, interval: AnyIntervalOrIdle) -> None: ...
 
-    def intervalProgress(self, percentComplete: float) -> None:
-        ...
+    def intervalProgress(self, percentComplete: float) -> None: ...
 
-    def intervalEnd(self) -> None:
-        ...
+    def intervalEnd(self) -> None: ...
 
-    def sessionStarted(self, session: Session) -> None:
-        ...
+    def sessionStarted(self, session: Session) -> None: ...
 
-    def sessionEnded(self) -> None:
-        ...
+    def sessionEnded(self) -> None: ...
 
     def intentionListObserver(self) -> SequenceObserver[Intention]:
         """
@@ -171,7 +167,9 @@ class NoUserInterface(UIEventListener):
         """
         return IgnoreChanges
 
-    def intervalObserver(self, interval: AnyIntervalOrIdle) -> Changes[str, object]:
+    def intervalObserver(
+        self, interval: AnyIntervalOrIdle
+    ) -> Changes[str, object]:
         """
         Return a change observer for the given C{interval}.
         """

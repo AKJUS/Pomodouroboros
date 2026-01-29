@@ -60,7 +60,6 @@ class Intention:
                         # we're just going to dump it into a dict here anyway,
                         # so the type ignore isn't a big deal
                         intention=None,  # type:ignore[arg-type]
-
                         # existing observer points at both the whole nexus and
                         # the UI and will this not be deep-copyable
                         observer=IgnoreChanges,

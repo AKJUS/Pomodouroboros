@@ -18,6 +18,7 @@ class Rescheduler:
     A L{Rescheduler} tracks changes on one or more objects, and, after they
     change, re-derives a group of scheduled calls.
     """
+
     scheduleCallback: Callable[[], Iterable[Cancellable]]
     _currentlyScheduled: list[Cancellable] = field(default_factory=list)
 
@@ -65,5 +66,3 @@ class _RescheduleObserver:
         return _RescheduleObserver(self._rescheduler, f"{self._path}.{key}")
 
     # End observer protocol
-
-

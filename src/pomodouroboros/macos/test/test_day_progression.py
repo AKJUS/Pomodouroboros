@@ -61,4 +61,3 @@ class DayProgressionTests(TestCase):
         clock.advance(now - clock.seconds())
         day.advanceToTime(clock.seconds(), observer)
         self.assertEqual(observer.progressController.shouldBeVisible, False)
-

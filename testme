@@ -2,12 +2,7 @@
 
 mypy ./src;
 
-if [ -e ./dist/TestPomodouroboros.app ]; then
-    # rm -fr ./dist/TestPomodouroboros.app;
-    echo 'already existed';
-else
-    TEST_MODE=YES encrust devalias;
-fi;
-
+rm -fr ./dist/TestPomodouroboros.app;
+TEST_MODE=YES encrust devalias;
 exec ./dist/TestPomodouroboros.app/Contents/MacOS/TestPomodouroboros;
 

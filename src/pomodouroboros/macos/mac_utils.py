@@ -195,5 +195,3 @@ def callOnNotification(
         observer,
         sender,
     )
-
-
