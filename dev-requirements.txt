@@ -25,7 +25,7 @@ click==8.3.1
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==46.0.3
+cryptography==46.0.4
     # via
     #   pyopenssl
     #   service-identity
@@ -141,7 +141,7 @@ zope-schema==8.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==25.3
+pip==26.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   pip-tools
