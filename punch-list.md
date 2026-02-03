@@ -3,12 +3,21 @@
 
 ## some of this should move to github issues
 
- - allow users to select a custom time for a pomodoro interval somehow
+ - implement quick-intention-set button
+   - actually hook up hotkey that the instruction text says you should press!!
+   - implement reordering intentions, so quick-intention-set gets the right top 7
+   - set the background color or something for the top 7 so it's clear which
+     ones will show up in the quick-set window?
+   - add configurability to set the global hotkey to something else
+
  - fix bug: dial resizes incorrectly / doesn't respond to monitor reconfiguration
- - development / quality of life issue: make `./testme` use an alias build
  - there should be a tab showing the current status, so the status menu item is not required
      - this should show:
        - instructions
+          - prerequisite: all setExplanation calls need to live in
+            pomodouroboros.common, because they should be consistent
+            cross-platform (i.e.: implement currently unused
+            describeCurrentState1)
        - mini timer
          - maybe just a progress bar rather than another ring?
          - visible indication of length of active session
@@ -29,11 +38,6 @@
    - (or make it work, maybe just to record estimates for now?)
  - make the 'history' tab work to actually show intervals
  - switch from one-circle to three-circles view so we can have visibility on session length
- - implement quick-intention-set button
-   - actually hook up hotkey that the instruction text says you should press!!
-   - implement reordering intentions, so quick-intention-set gets the right top 7
-   - set the background color or something for the top 7 so it's clear which
-     ones will show up in the quick-set window?
  - show the score for the current session (maybe current day?) somewhere!
  - "discreet view" for pair programming etc
  - hook up "sessions on" and "intervals on" date views so they actually affect the UI
@@ -44,8 +48,9 @@
     - intention already complete
     - intention abandoned
     - currently on break
- - all setExplanation calls need to live in pomodouroboros.common, because they
-   should be consistent cross-platform (i.e.: implement currently unused describeCurrentState1)
+ - show users next upcoming streak time (how long is this pomodoro they're about to commit to?)
+ - allow users to select a custom time for a pomodoro interval somehow
+ - development / quality of life issue: make `./testme` only build bundle if xib files have changed (follow up from alias build)
 
 
 linux stuff:
@@ -58,6 +63,7 @@ linux stuff:
 
 DONE:
 
+ - development / quality of life issue: make `./testme` use an alias build
  - display the length of the current pomodoro
  - allow for showing all intentions with no filter, so we can see abandoned / completed ones
  - add a way to start a manual session so I can debug this in off hours
