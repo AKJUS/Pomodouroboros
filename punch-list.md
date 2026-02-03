@@ -3,7 +3,6 @@
 
 ## some of this should move to github issues
 
- - display the length of the current pomodoro
  - allow users to select a custom time for a pomodoro interval somehow
  - fix bug: dial resizes incorrectly / doesn't respond to monitor reconfiguration
  - development / quality of life issue: make `./testme` use an alias build
@@ -59,6 +58,7 @@ linux stuff:
 
 DONE:
 
+ - display the length of the current pomodoro
  - allow for showing all intentions with no filter, so we can see abandoned / completed ones
  - add a way to start a manual session so I can debug this in off hours
  - maybe done? fix(?) start-prompt bug where we are not seeing a start prompt during a session
