@@ -99,7 +99,23 @@ class MacUserInterface:
             "\n\nStart a Pomodoro now with ⌘⌥⌃P !"
         )
 
-    def describeCurrentState(self, description: str) -> None: ...
+    def pomodoroUpdate(self, pomodoro: Pomodoro) -> None:
+        """
+        You're in a pomodoro, update the description to explain to the user
+        what should happen next.
+        """
+        # FIXME: use a human-readable interval here, not 'seconds'
+        self.setExplanation(
+            f"«{pomodoro.intention.title}»\n\n"
+            f"({int(pomodoro.endTime - self.clock.seconds())} seconds remain)"
+        )
+
+    def describeCurrentState(self, description: str) -> None:
+        """
+        FIXME: currently unimplemented by the model, but the logic for the
+        above setExplanation calls should be moved to the nexus, and this
+        should basically just be setExplanation.
+        """
 
     def sessionStarted(self, session: Session) -> None:
         "TODO"
@@ -120,7 +136,7 @@ class MacUserInterface:
                 debug("SHOWING upon Pomodoro")
                 self.pc.show()
                 self.pc.setColors(NSColor.greenColor(), NSColor.blueColor())
-                self.setExplanation(f"Work on Pomodoro: «{x.title}»")
+                self.pomodoroUpdate(interval)
                 self.intentionDataSource.startingBlocked()
             case Break():
                 debug("SHOWING upon break")
@@ -161,8 +177,11 @@ class MacUserInterface:
                 debug("StartPrompt update")
                 self.startPromptUpdate(self.currentInterval)
                 self.pc.animatePercentage(self.clock, percentComplete)
-            case Pomodoro() | Break() | GracePeriod():
+            case Pomodoro():
                 debug("Pom/Break/Grace update")
+                self.pomodoroUpdate(self.currentInterval)
+                self.pc.animatePercentage(self.clock, percentComplete)
+            case Break() | GracePeriod():
                 self.pc.animatePercentage(self.clock, percentComplete)
             case _:
                 debug("no percentage animation")
