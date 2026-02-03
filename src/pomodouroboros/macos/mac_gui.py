@@ -56,6 +56,7 @@ from .old_mac_gui import main as oldMain
 from .progress_hud import ProgressController
 from .sessions_gui import SessionDataSource
 from .text_fields import HeightSizableTextField, makeMenuLabel
+from .hotkeys import registerHotKey
 
 lightPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.7, 0.0, 0.7, 1.0)
 darkPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.5, 0.0, 0.5, 1.0)
@@ -255,7 +256,8 @@ class MacUserInterface:
         )
         nibInstance.instantiateWithOwner_topLevelObjects_(owner, None)
         pc = ProgressController()
-        dockIconWhenVisible(owner.intentionsWindow, onSpaceChange=pc.redisplay)
+        background = dockIconWhenVisible(owner.intentionsWindow, onSpaceChange=pc.redisplay)
+        registerHotKey(nexus, background)
 
         def openWindow() -> None:
             owner.intentionsWindow.makeKeyAndOrderFront_(owner)

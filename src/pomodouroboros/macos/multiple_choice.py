@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable, TypeVar
 
 from AppKit import (
+    NSApp,
     NSBackingStoreBuffered,
     NSButton,
     NSClosableWindowMask,
@@ -190,8 +191,10 @@ async def multipleChoiceButtons(
 
     nsw.setReleasedWhenClosed_(False)
     nsw.setHidesOnDeactivate_(False)
-    nsw.center()
     nsw.makeKeyAndOrderFront_(nsw)
+    app = NSApp()
+    app.activate()
+    nsw.center()
 
     result = await d
     nsw.close()

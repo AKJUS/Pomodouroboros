@@ -4,7 +4,9 @@
 ## some of this should move to github issues
 
  - implement quick-intention-set button
-   - actually hook up hotkey that the instruction text says you should press!!
+   - [x] actually hook up hotkey that the instruction text says you should press!!
+   - [ ] display an error when it isn't time to set an intention / start a
+         pomodoro yet (i.e.: on break, etc)
    - implement reordering intentions, so quick-intention-set gets the right top 7
    - set the background color or something for the top 7 so it's clear which
      ones will show up in the quick-set window?

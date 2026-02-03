@@ -4,7 +4,10 @@ from __future__ import annotations
 from contextlib import contextmanager
 from functools import wraps
 from typing import (
+    Awaitable,
+    Any,
     Callable,
+    Coroutine,
     Concatenate,
     Iterator,
     Literal,
@@ -20,6 +23,7 @@ from .debugger import debug
 from .nexus import Nexus
 
 T = TypeVar("T")
+A = TypeVar("A", bound=Awaitable[object])
 
 
 def intervalSummary(seconds: int) -> str:
@@ -100,6 +104,29 @@ def interactionRoot(
         with showFailures():
             debug("start action:", c)
             result = c(self, *args, **kwargs)
+            debug("save nexus:", result)
+            self.nexus.save()
+            debug("saved:", result)
+            return result
+
+    return showFailuresAndSave
+
+def interactionRootAsync(
+    c: Callable[Concatenate[HN, P], Awaitable[T]],
+) -> Callable[Concatenate[HN, P], Coroutine[Any, Any, T]]:
+    """
+    Decorator that should wrap every operation that potentially mutates the
+    model, saving it back to disk afterwards if it completes without raising an
+    exception, or printing the exception to the terminal if it does raise one.
+    """
+
+    @wraps(c)
+    async def showFailuresAndSave(self: HN, *args: P.args, **kwargs: P.kwargs) -> T:
+        # idea: maybe maintain a trail of N backups here, for easy undo/revert
+        # of certain edit actions?
+        with showFailures():
+            debug("start action:", c)
+            result = await c(self, *args, **kwargs)
             debug("save nexus:", result)
             self.nexus.save()
             debug("saved:", result)
