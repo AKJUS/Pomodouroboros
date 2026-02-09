@@ -141,11 +141,12 @@ zope-schema==8.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==26.0
+pip==25.3
     # via
     #   Pomodouroboros (pyproject.toml)
     #   pip-tools
 setuptools==80.10.2
     # via
+    #   Pomodouroboros (pyproject.toml)
     #   modulegraph
     #   pip-tools

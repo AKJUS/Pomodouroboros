@@ -160,4 +160,6 @@ zope-interface==8.2
 
 # The following packages are considered to be unsafe in a requirements file:
 setuptools==80.10.2
-    # via modulegraph
+    # via
+    #   Pomodouroboros (pyproject.toml)
+    #   modulegraph

@@ -33,6 +33,11 @@ version = "0.5.5"
 
 macOS-gui = [
     "py2app ; sys_platform == 'darwin'",
+
+    # https://github.com/ronaldoussoren/py2app/issues/563
+    # https://github.com/ronaldoussoren/py2app/issues/564
+    "setuptools<81",
+
     "pyobjc-core ; sys_platform == 'darwin'",
     "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
     "pyobjc-framework-ExceptionHandling ; sys_platform == 'darwin'",
@@ -56,6 +61,13 @@ Linux-gui = [
 dev = [
     "pip",
     "pip-tools",
+
+    # https://github.com/jazzband/pip-tools/issues/2319
+    "pip<26",
+
+    # need to repeat the pin from macOS-GUI or they will sadly conflict
+    "setuptools<81",
+
     "mypy",
     "mypy-zope",
     "types-python-dateutil",
