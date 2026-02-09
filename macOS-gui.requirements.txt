@@ -159,5 +159,5 @@ zope-interface==8.2
     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-setuptools==82.0.0
+setuptools==80.10.2
     # via modulegraph
