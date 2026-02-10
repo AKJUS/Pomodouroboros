@@ -422,6 +422,16 @@ class Nexus:
             )
         return newIntention
 
+    def prioritizeIntention(self, it: Intention) -> None:
+        """
+        Atomically prioritize the given intention so that C{self.intentions}
+        has it at the top.
+        """
+        self.intentions[:] = [
+            it,
+            *(each for each in self.intentions if each is not it),
+        ]
+
     def addManualSession(self, startTime: float, endTime: float) -> None:
         """
         Add a 'work session'; a discrete interval where we will be scored, and

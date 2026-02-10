@@ -600,16 +600,8 @@ class PomFilesOwner(NSObject):
     @IBAction
     @interactionRoot
     def popIntentionToTop_(self, sender: NSObject) -> None:
-        that = self.intentionDataSource.selectedIntention
-        if that is None:
-            return
-        it = that.intention
-        # atomically replace the whole list so we don't end up in an
-        # inconsistent state
-        self.nexus.intentions[:] = [
-            it,
-            *(each for each in self.nexus.intentions if each is not it),
-        ]
+        if (that := self.intentionDataSource.selectedIntention) is not None:
+            self.nexus.prioritizeIntention(that.intention)
 
     @IBAction
     @interactionRoot
