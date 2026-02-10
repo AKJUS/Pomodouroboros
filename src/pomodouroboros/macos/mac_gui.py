@@ -536,6 +536,8 @@ class PomFilesOwner(NSObject):
     testViewCollection: TestViewCollection
     testViewCollection = IBOutlet()
 
+    streakLevelIndicator = IBOutlet()
+
     if TYPE_CHECKING:
 
         @classmethod
@@ -631,6 +633,8 @@ class PomFilesOwner(NSObject):
         Let's get the GUI started.
         """
         with showFailures():
+            self.streakLevelIndicator.setEditable_(False)
+            self.streakLevelIndicator.setIntValue_(5)
             # self.addStackButton_(self)
             # TODO: update intention data source with initial data from nexus
             self.intentionDataSource.awakeWithNexus_(self.nexus)
