@@ -556,10 +556,6 @@ class PomFilesOwner(NSObject):
         debugMultiHud()
 
     @IBAction
-    def quickChooseIntention_(self, sender: NSObject) -> None:
-        pass
-
-    @IBAction
     @interactionRoot
     def newOneHourSession_(self, sender: NSObject) -> None:
         self.nexus._sessionManager.addManualSession(
