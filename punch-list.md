@@ -5,11 +5,11 @@
 
  - implement quick-intention-set button
    - [x] actually hook up hotkey that the instruction text says you should press!!
-   - [ ] display an error when it isn't time to set an intention / start a
+   - [x] display an error when it isn't time to set an intention / start a
          pomodoro yet (i.e.: on break, etc)
    - [ ] display time of upcoming pomodoro / streak length in title above
          buttons somewhere
-   - [ ] visibly explain what this dialog is going to do (“Choose an intention
+   - [x] visibly explain what this dialog is going to do (“Choose an intention
          to start your next pomodoro:”)
    - implement reordering intentions, so quick-intention-set gets the right top 7
    - set the background color or something for the top 7 so it's clear which

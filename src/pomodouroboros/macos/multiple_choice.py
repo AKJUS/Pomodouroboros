@@ -32,6 +32,8 @@ from Foundation import NSObject, NSRect
 from objc import IBAction
 from twisted.internet.defer import Deferred
 
+from .text_fields import HeightSizableTextField
+
 from ..model.debugger import debug
 
 T = TypeVar("T")
@@ -93,6 +95,7 @@ def oneButton(
 
 
 async def multipleChoiceButtons(
+    question: str,
     descriptions: list[tuple[NSColor, str, T]],
 ) -> T:
     d: Deferred[T] = Deferred()
@@ -106,7 +109,9 @@ async def multipleChoiceButtons(
     wide.cell().setWraps_(True)
     wide.setControlSize_(NSControlSizeLarge)
     wide.setUsesSingleLineMode_(True)
-    viewsToStack = []
+    hstf = HeightSizableTextField.wrappingLabelWithString_(question)
+    hstf.setSelectable_(False)
+    viewsToStack = [hstf]
 
     for index, (color, title, potentialAnswer) in enumerate(descriptions):
         # skew = 3

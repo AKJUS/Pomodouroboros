@@ -568,6 +568,7 @@ class PomFilesOwner(NSObject):
     def addStackButton_(self, sender: NSObject) -> None:
         async def getButton() -> None:
             result = await multipleChoiceButtons(
+                "Choose your favorite color:",
                 [
                     (NSColor.redColor(), "red", 10),
                     (NSColor.orangeColor(), "orange", 11),
