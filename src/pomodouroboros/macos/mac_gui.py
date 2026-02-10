@@ -256,7 +256,9 @@ class MacUserInterface:
         )
         nibInstance.instantiateWithOwner_topLevelObjects_(owner, None)
         pc = ProgressController()
-        background = dockIconWhenVisible(owner.intentionsWindow, onSpaceChange=pc.redisplay)
+        background = dockIconWhenVisible(
+            owner.intentionsWindow, onSpaceChange=pc.redisplay
+        )
         registerHotKey(nexus, background)
 
         def openWindow() -> None:
