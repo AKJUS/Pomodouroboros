@@ -575,7 +575,7 @@ class PomFilesOwner(NSObject):
                     (NSColor.blueColor(), "blue", 14),
                     (NSColor.systemIndigoColor(), "indigo", 15),
                     (NSColor.purpleColor(), "purple", 16),
-                ]
+                ],
             )
             await answer("choice complete", f"result was {result}")
 
