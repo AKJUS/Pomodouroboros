@@ -949,7 +949,7 @@ class AfterChanger:
 
     @contextmanager
     def removed(self, key: Any, old: Any) -> Iterator[None]:
-        assert 0, "this should not be removed"
+        assert 0, f"this should not be removed: {repr(key)} was: {old}"
         yield
 
     def child(self, key: Any) -> Changes[Any, Any]:
