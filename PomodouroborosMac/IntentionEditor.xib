@@ -408,7 +408,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="457" y="348" width="934" height="680"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1049"/>
             <value key="minSize" type="size" width="600" height="600"/>
             <view key="contentView" id="Qzr-8h-V2F">
                 <rect key="frame" x="0.0" y="0.0" width="934" height="680"/>
@@ -1392,8 +1392,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="0VN-am-jg8">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="791411350.79066706">
-                                                    <!--2026-01-29 20:29:10 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="792440438.14324296">
+                                                    <!--2026-02-10 18:20:38 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1941,8 +1941,8 @@
                                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             <datePickerCell key="cell" borderStyle="bezel" alignment="left" useCurrentDate="YES" id="2ek-VJ-F3s">
                                                 <font key="font" metaFont="system"/>
-                                                <date key="date" timeIntervalSinceReferenceDate="791411350.802091">
-                                                    <!--2026-01-29 20:29:10 +0000-->
+                                                <date key="date" timeIntervalSinceReferenceDate="792440438.15878403">
+                                                    <!--2026-02-10 18:20:38 +0000-->
                                                 </date>
                                                 <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                                 <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -2003,7 +2003,7 @@
             <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="0.0" y="0.0" width="823" height="682"/>
-            <rect key="screenRect" x="0.0" y="0.0" width="3840" height="1569"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1620" height="1049"/>
             <view key="contentView" identifier="DebugView" id="aq4-PH-dd2" userLabel="DebugView">
                 <rect key="frame" x="0.0" y="0.0" width="823" height="682"/>
                 <autoresizingMask key="autoresizingMask"/>
