@@ -11,10 +11,9 @@
          buttons somewhere
    - [x] visibly explain what this dialog is going to do (“Choose an intention
          to start your next pomodoro:”)
-   - implement reordering intentions, so quick-intention-set gets the right top 7
-   - set the background color or something for the top 7 so it's clear which
-     ones will show up in the quick-set window?
-   - add configurability to set the global hotkey to something else
+   - [ ] set the background color or something for the top 7 so it's clear
+         which ones will show up in the quick-set window?
+   - [ ] add configurability to set the global hotkey to something else
 
  - fix bug: dial resizes incorrectly / doesn't respond to monitor reconfiguration
  - there should be a tab showing the current status, so the status menu item is not required
@@ -78,3 +77,4 @@ DONE:
  - add a way to start a manual session so I can debug this in off hours
  - maybe done? fix(?) start-prompt bug where we are not seeing a start prompt during a session
  - fix bug: dial flickers at the start of StartPrompt, there's probably a duplicate timer?
+ - implement reordering intentions, so quick-intention-set gets the right top 7

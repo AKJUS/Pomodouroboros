@@ -599,6 +599,20 @@ class PomFilesOwner(NSObject):
 
     @IBAction
     @interactionRoot
+    def popIntentionToTop_(self, sender: NSObject) -> None:
+        that = self.intentionDataSource.selectedIntention
+        if that is None:
+            return
+        it = that.intention
+        # atomically replace the whole list so we don't end up in an
+        # inconsistent state
+        self.nexus.intentions[:] = [
+            it,
+            *(each for each in self.nexus.intentions if each is not it),
+        ]
+
+    @IBAction
+    @interactionRoot
     def startSelectedIntention_(self, sender: NSObject) -> None:
         """
         Start a pomodoro using the selected intention.
