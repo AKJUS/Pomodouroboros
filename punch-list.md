@@ -58,6 +58,9 @@
  - allow users to select a custom time for a pomodoro interval somehow
  - development / quality of life issue: make `./testme` only build bundle if xib files have changed (follow up from alias build)
 
+ - "undo" - I picked the wrong intention in the pomodoro intention selector
+   (especially: hit the wrong number hotkey), let me select another one
+
 
 linux stuff:
 - figure out what KDE's version of this is
