@@ -619,18 +619,6 @@ class PomFilesOwner(NSObject):
         debug("set intention abandoned", intent.intention)
         self.intentionDataSource.refilter()
 
-    @IBAction
-    @interactionRoot
-    def pokeIntentionDescription_(self, sender: NSObject) -> None:
-        irow = (
-            # self.intentionDataSource.tableView_objectValueForTableColumn_row_(
-            #     self.intentionsTable, None, 0
-            # )
-            self.intentionDataSource.rowObjectAt_(0)
-        )
-        irow.textDescription = "new description"
-        irow.title = "new title"
-
     @interactionRoot
     def awakeFromNib(self) -> None:
         """
