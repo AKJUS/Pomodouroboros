@@ -22,7 +22,7 @@
           - prerequisite: all setExplanation calls need to live in
             pomodouroboros.common, because they should be consistent
             cross-platform (i.e.: implement currently unused
-            describeCurrentState1)
+            describeCurrentState)
        - mini timer
          - maybe just a progress bar rather than another ring?
          - visible indication of length of active session
