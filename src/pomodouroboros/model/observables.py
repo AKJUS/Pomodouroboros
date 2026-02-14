@@ -143,6 +143,7 @@ from .debugger import debug
 
 __all__ = [
     "observable",
+    "observify",
     "Changes",
     "IgnoreChanges",
     "DebugChanges",
@@ -166,7 +167,7 @@ V = TypeVar("V")
 Kcon = TypeVar("Kcon", contravariant=True)
 Vcon = TypeVar("Vcon", contravariant=True)
 Scon = TypeVar("Scon", contravariant=True)
-Ty = TypeVar("Ty", bound=type)
+Ty = TypeVar("Ty", bound=type[object])
 _observabilityHint = "__observable_observer__"
 
 
@@ -822,8 +823,40 @@ class _ObserverProperty:
         return _ObserverProperty(maybeObservable, observerName)
 
 
+def observify(cls: Ty) -> None:
+    """
+    Transform a dataclass into an C{@observable} to work around a mypy bug in
+    dataclass_transform (or something; not reported upstream yet).
+    """
+    observerName = None
+    originalAnnotations = cls.__annotations__
+    for i, (k, v) in enumerate(originalAnnotations.items()):
+        if _isObserver(_unstringify(cls, v)):
+            observerIndex = i
+            observerName = k
+            break
+
+    if observerName is None:
+        raise MustSpecifyObserver(
+            "you must annotate one attribute with Observer"
+        )
+
+    setattr(cls, _observabilityHint, observerName)
+    for k, v in originalAnnotations.items():
+        ov = _unstringify(cls, v)
+        if _shouldBeObservable(k, ov, observerName):
+            setattr(cls, k, _ObservableProperty(observerName, k))
+    if observerIndex != 0:
+        # If the observer is not specified as the first argument, then the
+        # dataclass-generated __init__ is going to assign other attributes
+        # first, and therefore we cannot observe them.  So here we provide
+        # a class-level default that will allow the attribute to be
+        # retrieved by ObservableProperty.__set__/.__delete__.
+        setattr(cls, observerName, IgnoreChanges)
+
+
 @dataclass_transform(field_specifiers=(field,))
-def observable(repr: bool = True) -> Callable[[Ty], Ty]:
+def observable(*, repr: bool = True) -> Callable[[Ty], Ty]:
     """
     Decorate a dataclass to indicate that it may be observed by its observer
     attribute.  This is a dataclass transform that uses the standard library
@@ -835,33 +868,8 @@ def observable(repr: bool = True) -> Callable[[Ty], Ty]:
     """
 
     def make_observable(cls: Ty) -> Ty:
-        observerName = None
-        originalAnnotations = cls.__annotations__
-
         cls = dataclass(repr=repr)(cls)  # type:ignore[assignment]
-        for i, (k, v) in enumerate(originalAnnotations.items()):
-            if _isObserver(_unstringify(cls, v)):
-                observerIndex = i
-                observerName = k
-                break
-
-        if observerName is None:
-            raise MustSpecifyObserver(
-                "you must annotate one attribute with Observer"
-            )
-
-        setattr(cls, _observabilityHint, observerName)
-        for k, v in originalAnnotations.items():
-            ov = _unstringify(cls, v)
-            if _shouldBeObservable(k, ov, observerName):
-                setattr(cls, k, _ObservableProperty(observerName, k))
-        if observerIndex != 0:
-            # If the observer is not specified as the first argument, then the
-            # dataclass-generated __init__ is going to assign other attributes
-            # first, and therefore we cannot observe them.  So here we provide
-            # a class-level default that will allow the attribute to be
-            # retrieved by ObservableProperty.__set__/.__delete__.
-            setattr(cls, observerName, IgnoreChanges)
+        observify(cls)
         return cls
 
     return make_observable

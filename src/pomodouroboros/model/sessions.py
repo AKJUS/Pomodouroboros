@@ -35,6 +35,7 @@ from twisted.internet.defer import Deferred
 
 from .observables import (
     observable,
+    observify,
     addObserver,
     Changes,
     Filter,
@@ -145,7 +146,7 @@ class StatefulCancel:
 MAX_SESSION_LENGTH = timedelta(days=7)
 
 
-@observable()
+@dataclass()
 class SessionManager:
     observer: Observer
     upcomingSessions: ObservableList[Session]
@@ -312,3 +313,6 @@ class SessionManager:
         endSchedule.observe(filter, "self")
 
         return self
+
+
+observify(SessionManager)
