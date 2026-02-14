@@ -34,15 +34,15 @@ from fritter.tree import Scale, branch
 from twisted.internet.defer import Deferred
 
 from .observables import (
+    observable,
+    addObserver,
     Changes,
     Filter,
     IgnoreChanges,
     ObservableList,
     Observer,
-    observable,
 )
 
-from .observables import addObserver
 from .rescheduling import Rescheduler
 from .debugger import debug
 
