@@ -6,7 +6,7 @@ def debug(*x: object) -> None:
         print(*x)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from pomodouroboros.model.storage import loadDefaultNexus
     from pomodouroboros.model.test.test_model import TestUserInterface
     from twisted.internet.task import Clock
@@ -16,4 +16,3 @@ if __name__ == '__main__':
     clock.advance(time())
     ui = TestUserInterface(clock)
     nexus = loadDefaultNexus(clock.seconds(), ui.setIt)
-

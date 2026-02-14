@@ -55,10 +55,14 @@ def registerHotKey(nexus: Nexus, background: DockIconManager) -> None:
                 # know the reason they can't start a pomodoro right now.
                 match nexus.currentInterval:
                     case Pomodoro(intention=i):
-                        await answer(f"A pomodoro is already running: «{i.title}»")
+                        await answer(
+                            f"A pomodoro is already running: «{i.title}»"
+                        )
                         return
                     case Break():
-                        await answer("A break is currently running; take it easy.")
+                        await answer(
+                            "A break is currently running; take it easy."
+                        )
                         return
 
                 intention: Intention | None = await multipleChoiceButtons(

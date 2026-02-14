@@ -111,6 +111,7 @@ def interactionRoot(
 
     return showFailuresAndSave
 
+
 def interactionRootAsync(
     c: Callable[Concatenate[HN, P], Awaitable[T]],
 ) -> Callable[Concatenate[HN, P], Coroutine[Any, Any, T]]:
@@ -121,7 +122,9 @@ def interactionRootAsync(
     """
 
     @wraps(c)
-    async def showFailuresAndSave(self: HN, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def showFailuresAndSave(
+        self: HN, *args: P.args, **kwargs: P.kwargs
+    ) -> T:
         # idea: maybe maintain a trail of N backups here, for easy undo/revert
         # of certain edit actions?
         with showFailures():
