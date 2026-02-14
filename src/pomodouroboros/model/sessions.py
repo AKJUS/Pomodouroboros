@@ -33,7 +33,7 @@ from fritter.repeat.rules.datetimes import EachDTRule, EachWeekOn
 from fritter.tree import Scale, branch
 from twisted.internet.defer import Deferred
 
-from pomodouroboros.model.observables import (
+from .observables import (
     Changes,
     Filter,
     IgnoreChanges,
