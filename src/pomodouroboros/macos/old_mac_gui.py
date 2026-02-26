@@ -813,11 +813,11 @@ def main(reactor: IReactorTime) -> None:
     dayManager = DayManager.new(reactor, ctrl, dayLoader)
     dayManager.start()
 
-    def onSpaceChange() -> None:
-        dayManager.progressController.redisplay()
-
-    dockIconWhenVisible(ctrl.editorWindow, onSpaceChange=onSpaceChange)
+    dockIconWhenVisible(
+        ctrl.editorWindow,
+        onSpaceChange=dayManager.progressController.redisplay,
+    )
     callOnNotification(
         NSApplicationDidChangeScreenParametersNotification,
-        onSpaceChange,
+        dayManager.progressController.redisplay,
     )

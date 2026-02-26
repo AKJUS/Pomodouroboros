@@ -8,12 +8,13 @@ from zoneinfo import ZoneInfo
 
 from AppKit import (
     NSApplication,
+    NSApplicationDidChangeScreenParametersNotification,
     NSColor,
     NSNib,
+    NSSplitView,
     NSTableView,
     NSTextField,
     NSWindow,
-    NSSplitView,
 )
 from datetype import aware, naive
 from Foundation import NSIndexSet, NSObject
@@ -24,6 +25,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import LoopingCall
 
+from pomodouroboros.macos.mac_utils import callOnNotification
 from pomodouroboros.macos.progress_hud import PieTimer
 from pomodouroboros.model.intervals import Idle
 
@@ -49,6 +51,7 @@ from ..model.util import (
     showFailures,
 )
 from ..storage import TEST_MODE
+from .hotkeys import registerHotKey
 from .hudmulti import debugMultiHud
 from .intentions_gui import IntentionDataSource
 from .multiple_choice import multipleChoiceButtons
@@ -56,7 +59,6 @@ from .old_mac_gui import main as oldMain
 from .progress_hud import ProgressController
 from .sessions_gui import SessionDataSource
 from .text_fields import HeightSizableTextField, makeMenuLabel
-from .hotkeys import registerHotKey
 
 lightPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.7, 0.0, 0.7, 1.0)
 darkPurple = NSColor.colorWithSRGBRed_green_blue_alpha_(0.5, 0.0, 0.5, 1.0)
@@ -257,7 +259,12 @@ class MacUserInterface:
         nibInstance.instantiateWithOwner_topLevelObjects_(owner, None)
         pc = ProgressController()
         background = dockIconWhenVisible(
-            owner.intentionsWindow, onSpaceChange=pc.redisplay
+            owner.intentionsWindow,
+            onSpaceChange=pc.redisplay,
+        )
+        callOnNotification(
+            NSApplicationDidChangeScreenParametersNotification,
+            pc.redisplay,
         )
         registerHotKey(nexus, background)
 
