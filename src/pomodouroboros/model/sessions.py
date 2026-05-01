@@ -15,6 +15,7 @@ from typing import (
     Iterator,
     Protocol,
     Sequence,
+    Self,
 )
 from zoneinfo import ZoneInfo
 
@@ -244,7 +245,7 @@ class SessionManager:
         zone: ZoneInfo,
         sessions: Iterable[Session] = (),
         rules: Iterable[DailySessionRule] = (),
-    ) -> SessionManager:
+    ) -> Self:
         dateScale: Scale[DateTime[ZoneInfo], float, float] = DateScale(zone)
         now = scheduler.now()
         branchManager, dateScheduler = branch(scheduler, dateScale)
