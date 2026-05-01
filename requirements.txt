@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --strip-extras
 #
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   service-identity
     #   twisted
@@ -14,7 +14,7 @@ cffi==2.0.0
     # via cryptography
 constantly==23.10.4
     # via twisted
-cryptography==46.0.5
+cryptography==47.0.0
     # via
     #   pyopenssl
     #   service-identity
@@ -32,17 +32,17 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-idna==3.11
+idna==3.13
     # via
     #   hyperlink
     #   twisted
 incremental==24.11.0
     # via twisted
-packaging==26.0
+packaging==26.2
     # via incremental
 priority==1.3.0
     # via twisted
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   pyasn1-modules
     #   service-identity
@@ -50,7 +50,7 @@ pyasn1-modules==0.4.2
     # via service-identity
 pycparser==3.0
     # via cffi
-pyopenssl==25.3.0
+pyopenssl==26.1.0
     # via twisted
 python-dateutil==2.9.0.post0
     # via Pomodouroboros (pyproject.toml)
@@ -62,9 +62,9 @@ twisted==25.5.0
     # via Pomodouroboros (pyproject.toml)
 typing-extensions==4.15.0
     # via twisted
-tzdata==2025.3
+tzdata==2026.2
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
-zope-interface==8.2
+zope-interface==8.4
     # via twisted

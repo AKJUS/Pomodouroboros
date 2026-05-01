@@ -9,23 +9,23 @@ altgraph==0.17.5
     #   macholib
     #   modulegraph
     #   py2app
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   service-identity
     #   twisted
 automat==25.4.16
     # via twisted
-build==1.4.0
+build==1.5.0
     # via pip-tools
 cffi==2.0.0
     # via cryptography
-click==8.3.1
+click==8.3.3
     # via
     #   encrust
     #   pip-tools
 constantly==23.10.4
     # via twisted
-cryptography==46.0.5
+cryptography==47.0.0
     # via
     #   pyopenssl
     #   service-identity
@@ -47,13 +47,13 @@ hyperframe==6.1.0
     # via h2
 hyperlink==21.0.0
     # via twisted
-idna==3.11
+idna==3.13
     # via
     #   hyperlink
     #   twisted
 incremental==24.11.0
     # via twisted
-librt==0.8.0
+librt==0.9.0
     # via mypy
 macholib==1.16.4
     # via
@@ -69,14 +69,14 @@ mypy-extensions==1.1.0
     # via mypy
 mypy-zope==1.0.14
     # via Pomodouroboros (pyproject.toml)
-packaging==26.0
+packaging==26.2
     # via
     #   build
     #   delocate
     #   incremental
     #   py2app
     #   wheel
-pathspec==1.0.4
+pathspec==1.1.1
     # via mypy
 pip-tools==7.5.3
     # via Pomodouroboros (pyproject.toml)
@@ -84,19 +84,23 @@ priority==1.3.0
     # via twisted
 py2app==0.28.10
     # via encrust
-pyasn1==0.6.2
+pyasn1==0.6.3
     # via
     #   pyasn1-modules
     #   service-identity
 pyasn1-modules==0.4.2
     # via service-identity
 pycairo==1.29.0
-    # via Pomodouroboros (pyproject.toml)
+    # via
+    #   Pomodouroboros (pyproject.toml)
+    #   pygobject
 pycparser==3.0
     # via cffi
-pygobject-stubs==2.16.0
+pygobject==3.56.2
+    # via pygobject-stubs
+pygobject-stubs==2.17.0
     # via Pomodouroboros (pyproject.toml)
-pyopenssl==25.3.0
+pyopenssl==26.1.0
     # via twisted
 pyproject-hooks==1.2.0
     # via
@@ -112,9 +116,9 @@ twisted==25.5.0
     # via
     #   Pomodouroboros (pyproject.toml)
     #   encrust
-types-python-dateutil==2.9.0.20260124
+types-python-dateutil==2.9.0.20260408
     # via Pomodouroboros (pyproject.toml)
-types-python-xlib==0.33.0.20250809
+types-python-xlib==0.33.0.20260408
     # via Pomodouroboros (pyproject.toml)
 typing-extensions==4.15.0
     # via
@@ -122,17 +126,17 @@ typing-extensions==4.15.0
     #   mypy
     #   pygobject-stubs
     #   twisted
-tzdata==2025.3
+tzdata==2026.2
     # via fritter
 ulid-py==1.1.0
     # via Pomodouroboros (pyproject.toml)
-wheel==0.46.3
+wheel==0.47.0
     # via pip-tools
 wheel-filename==2.1.0
     # via encrust
-zope-event==6.1
+zope-event==6.2
     # via zope-schema
-zope-interface==8.2
+zope-interface==8.4
     # via
     #   mypy-zope
     #   twisted
@@ -141,11 +145,11 @@ zope-schema==8.1
     # via mypy-zope
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==26.0.1
+pip==26.1
     # via
     #   Pomodouroboros (pyproject.toml)
     #   pip-tools
-setuptools==82.0.0
+setuptools==82.0.1
     # via
     #   Pomodouroboros (pyproject.toml)
     #   modulegraph
